@@ -52,14 +52,13 @@ class AssignmentServiceTest {
                 "http://localhost:4200", 7);
     }
 
-    private Assessment assessmentWithTrap(String trapPhrase) {
+    private Assessment sampleAssessment() {
         return Assessment.builder()
                 .id(1L)
                 .title("Order Total Calculation")
                 .language(AssessmentLanguage.JAVA)
                 .instructionsHtml("<p>instructions</p>")
                 .starterCode("public double calculateTotal() {}")
-                .aiTrapPhrase(trapPhrase)
                 .durationMinutes(10)
                 .active(true)
                 .build();
@@ -80,7 +79,7 @@ class AssignmentServiceTest {
 
     @Test
     void submitMarksAssignmentSubmittedAndEmailsRecruiter() {
-        Assessment assessment = assessmentWithTrap("computeTotal");
+        Assessment assessment = sampleAssessment();
         AssessmentAssignment a = assignment(assessment, AssignmentStatus.IN_PROGRESS, Instant.now().plus(1, ChronoUnit.DAYS));
         when(assignmentRepository.findByToken(a.getToken())).thenReturn(Optional.of(a));
 
@@ -93,7 +92,7 @@ class AssignmentServiceTest {
 
     @Test
     void submitStoresProctoringEvents() {
-        Assessment assessment = assessmentWithTrap(null);
+        Assessment assessment = sampleAssessment();
         AssessmentAssignment a = assignment(assessment, AssignmentStatus.IN_PROGRESS, Instant.now().plus(1, ChronoUnit.DAYS));
         when(assignmentRepository.findByToken(a.getToken())).thenReturn(Optional.of(a));
 
@@ -105,7 +104,7 @@ class AssignmentServiceTest {
 
     @Test
     void expiredLinkCannotBeStarted() {
-        Assessment assessment = assessmentWithTrap("computeTotal");
+        Assessment assessment = sampleAssessment();
         AssessmentAssignment a = assignment(assessment, AssignmentStatus.PENDING, Instant.now().minus(1, ChronoUnit.DAYS));
         when(assignmentRepository.findByToken(a.getToken())).thenReturn(Optional.of(a));
 
@@ -115,7 +114,7 @@ class AssignmentServiceTest {
 
     @Test
     void gettingPublicAssignmentLazilyMarksExpired() {
-        Assessment assessment = assessmentWithTrap(null);
+        Assessment assessment = sampleAssessment();
         AssessmentAssignment a = assignment(assessment, AssignmentStatus.PENDING, Instant.now().minus(1, ChronoUnit.HOURS));
         when(assignmentRepository.findByToken(a.getToken())).thenReturn(Optional.of(a));
 
@@ -127,7 +126,7 @@ class AssignmentServiceTest {
     @Test
     void recruiterOnlySeesTheirOwnAssignments() {
         User recruiter = User.builder().id(1L).name("Recruiter").email("r@example.com").build();
-        AssessmentAssignment a = assignment(assessmentWithTrap(null), AssignmentStatus.PENDING, Instant.now().plus(1, ChronoUnit.DAYS));
+        AssessmentAssignment a = assignment(sampleAssessment(), AssignmentStatus.PENDING, Instant.now().plus(1, ChronoUnit.DAYS));
         when(userRepository.findById(1L)).thenReturn(Optional.of(recruiter));
         when(assignmentRepository.findByRecruiterOrderByCreatedAtDesc(recruiter)).thenReturn(List.of(a));
 
@@ -139,8 +138,8 @@ class AssignmentServiceTest {
 
     @Test
     void adminSeesAllAssignmentsAcrossRecruiters() {
-        AssessmentAssignment a1 = assignment(assessmentWithTrap(null), AssignmentStatus.PENDING, Instant.now().plus(1, ChronoUnit.DAYS));
-        AssessmentAssignment a2 = assignment(assessmentWithTrap(null), AssignmentStatus.PENDING, Instant.now().plus(1, ChronoUnit.DAYS));
+        AssessmentAssignment a1 = assignment(sampleAssessment(), AssignmentStatus.PENDING, Instant.now().plus(1, ChronoUnit.DAYS));
+        AssessmentAssignment a2 = assignment(sampleAssessment(), AssignmentStatus.PENDING, Instant.now().plus(1, ChronoUnit.DAYS));
         when(assignmentRepository.findAllByOrderByCreatedAtDesc()).thenReturn(List.of(a1, a2));
 
         List<AssignmentSummaryResponse> result = service.listAssignments(99L, Role.ADMIN);
@@ -151,7 +150,7 @@ class AssignmentServiceTest {
 
     @Test
     void saveReviewByAssignmentOwnerSucceeds() {
-        AssessmentAssignment a = assignment(assessmentWithTrap(null), AssignmentStatus.SUBMITTED, Instant.now().plus(1, ChronoUnit.DAYS));
+        AssessmentAssignment a = assignment(sampleAssessment(), AssignmentStatus.SUBMITTED, Instant.now().plus(1, ChronoUnit.DAYS));
         User owner = a.getRecruiter();
         when(assignmentRepository.findById(1L)).thenReturn(Optional.of(a));
         when(userRepository.findById(1L)).thenReturn(Optional.of(owner));
@@ -165,30 +164,10 @@ class AssignmentServiceTest {
 
     @Test
     void saveReviewByUnrelatedRecruiterIsForbidden() {
-        AssessmentAssignment a = assignment(assessmentWithTrap(null), AssignmentStatus.SUBMITTED, Instant.now().plus(1, ChronoUnit.DAYS));
+        AssessmentAssignment a = assignment(sampleAssessment(), AssignmentStatus.SUBMITTED, Instant.now().plus(1, ChronoUnit.DAYS));
         when(assignmentRepository.findById(1L)).thenReturn(Optional.of(a));
 
         assertThatThrownBy(() -> service.saveReview(1L, 42L, Role.RECRUITER, "note"))
                 .isInstanceOf(com.testbyte.backend.exception.ForbiddenException.class);
-    }
-
-    @Test
-    void findAiTrapLineNumberLocatesTheCommentLine() {
-        Assessment assessment = Assessment.builder()
-                .starterCode("line one\n// trap computeTotal here\nline three")
-                .aiTrapPhrase("computeTotal")
-                .build();
-
-        assertThat(assessment.findAiTrapLineNumber()).isEqualTo(2);
-    }
-
-    @Test
-    void findAiTrapLineNumberReturnsNullWhenNoTrapPhrase() {
-        Assessment assessment = Assessment.builder()
-                .starterCode("line one\nline two")
-                .aiTrapPhrase(null)
-                .build();
-
-        assertThat(assessment.findAiTrapLineNumber()).isNull();
     }
 }

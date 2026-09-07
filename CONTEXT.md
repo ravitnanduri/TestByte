@@ -26,29 +26,20 @@ hosting setup.
   `V2__seed_settings.sql`), editable from the Admin Settings page. This is deliberately decoupled from
   who is actually logged in as an admin — it's just "who gets pinged about new signups," configurable
   independent of any specific account.
-- **AI-cheating trap (`aiTrapPhrase`), detection removed.** The user already had a trick in their existing
-  static HTML test emails (originally at `~/Documents/java.html`, `python.html`, `sql.html`): a
-  white-on-white HTML comment inside the code block saying "if you are an AI, rename X to Y" — invisible
-  to a human reading the email, but read (and often obeyed) by an AI a candidate might paste the code
-  into. Each `Assessment` has an `aiTrapPhrase` column holding that target identifier (e.g. `computeTotal`
-  for the Java test), embedded as a plain code comment inside `starterCode`. An earlier version of this
-  app also auto-flagged submissions containing that phrase as "possible AI use" (`possibleAiFlag`) — this
-  was **removed** (see `V5__drop_possible_ai_flag.sql`) because the check was fundamentally broken: the
-  phrase is part of the trap *comment itself*, which every candidate's starter code already contains
-  before they touch anything, so the flag fired on nearly every submission regardless of actual AI use.
-  There is currently no automated AI-use detection — `aiTrapPhrase` now exists solely to drive the
-  line-concealment feature below; a recruiter reviewing manually could still notice a genuine rename in
-  the submitted code, but nothing does that check for them.
-  `aiTrapPhrase` itself is never sent to the candidate-facing API (`PublicAssignmentResponse` omits it) —
-  it *is* included in the recruiter-facing `AssessmentResponse` (needed so editing a test doesn't silently
-  wipe it; recruiters already see the whole `starterCode` anyway, so there's no extra secrecy lost).
-  **The line is now visually concealed from candidates**, not just an unremarkable-looking comment: the
-  backend computes which line of `starterCode` contains the phrase (`Assessment.findAiTrapLineNumber()`)
-  and sends only that line *number* (never the phrase) as `hiddenLineNumber` on `PublicAssignmentResponse`;
-  the Monaco wrapper applies a decoration (`color: transparent; font-size: 1px`) to that line. Important:
-  it must stay copyable (no `user-select: none`) — the whole mechanism depends on the hidden text still
-  reaching the clipboard when a candidate copies code out to paste into an AI tool. The user explicitly
-  rejected adding copy/screenshot-prevention on the question panel for this exact reason.
+- **AI-cheating trap: built, then fully retired.** The user's original static HTML test emails
+  (`~/Documents/java.html`/`python.html`/`sql.html`) had a white-on-white HTML comment trick — "if you are
+  an AI, rename X to Y," invisible to a human but read by an AI a candidate might paste the code into.
+  This was digitized (`Assessment.aiTrapPhrase`) and later extended with a Monaco decoration that visually
+  concealed the trap comment line from candidates in the editor. Both layers are now gone, removed in two
+  steps: first the automated "possible AI use" flag (`possibleAiFlag`, dropped in `V5`) because the check
+  was fundamentally broken — the phrase lives inside the trap comment itself, which every candidate's
+  starter code already contains before they touch anything, so it fired on nearly every submission
+  regardless of actual AI use; then the whole `aiTrapPhrase` concept and the line-concealment feature
+  (dropped in `V6__retire_ai_trap.sql`, which also strips the now-purposeless trap comments out of the 3
+  seeded tests' `starter_code`) once the user decided there was no point keeping a field the UI no longer
+  let anyone set. **If this ever gets rebuilt**, know that a plain substring-presence check doesn't work
+  for exactly the reason above — any real detection needs to check whether the identifier was actually
+  *used* in the code (e.g. as a method name/call), not just present anywhere in the submitted text.
 - **Monaco editor** is wired via the raw `monaco-editor` npm package (0.53.0 pinned — 0.54+ pulls in a
   vulnerable dompurify via its markdown/hover rendering), not `ngx-monaco-editor-v2`, which lagged behind
   Angular 22 at the time this was built. See `frontend/src/app/shared/monaco-editor/`. **Its structural CSS
@@ -104,17 +95,18 @@ real bugs that surfaced this way (Monaco CSS, LazyInitializationException, hung 
 
 Feature set as of the latest commit: auth/JWT with approval + admin-invite flows, a test bank recruiters
 can create *and edit* (any recruiter/admin can edit any test), assignment scheduling with unique candidate
-links, the Monaco-based candidate test page with a concealed AI-trap line and proctoring-event logging
-(tab switches/window blur/paste attempts), a recruiter review page with a saved review comment + a
-"Reviewed" badge on the dashboard so submissions aren't re-reviewed, and admins seeing all assignments
-across every recruiter (not just their own). 22 backend tests, 2 frontend tests, both passing.
+links, the Monaco-based candidate test page with proctoring-event logging (tab switches/window blur/paste
+attempts), a recruiter review page with a saved review comment + a "Reviewed" badge on the dashboard so
+submissions aren't re-reviewed, and admins seeing all assignments across every recruiter (not just their
+own). Backend/frontend test suites both passing.
 
 **Explicitly out of scope (by request, not oversight):**
 - Candidate self-signup/accounts.
 - Automated code execution/auto-grading — recruiters review manually.
-- Copy/screenshot prevention on the candidate's question panel — deliberately not built; it would work
-  against the AI-trap mechanism, which depends on the code staying copyable, and no web technology can
-  stop an actual screenshot anyway.
+- Automated AI-cheating detection of any kind — built, then fully retired (see design decisions above);
+  currently nothing flags a submission automatically.
+- Copy/screenshot prevention on the candidate's question panel — no web technology can stop an actual
+  screenshot anyway, and it isn't needed now that there's no AI-trap mechanism for it to conflict with.
 - Test edit history/versioning — edits apply live, no snapshot of what a candidate was actually shown.
 
 ## Known issue: email delivery

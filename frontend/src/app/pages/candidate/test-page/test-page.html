@@ -44,7 +44,6 @@
       <app-monaco-editor
         [value]="code()"
         [language]="monacoLanguage()"
-        [hiddenLineNumber]="a.hiddenLineNumber"
         (valueChange)="code.set($event)"
         style="display: block; height: 420px; margin-bottom: 16px;"
       />

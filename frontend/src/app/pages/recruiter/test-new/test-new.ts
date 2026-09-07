@@ -24,7 +24,6 @@ export class TestNew {
     language: this.fb.nonNullable.control<AssessmentLanguage>('JAVA', Validators.required),
     instructionsHtml: ['', Validators.required],
     starterCode: ['', Validators.required],
-    aiTrapPhrase: [''],
     durationMinutes: [10, [Validators.required, Validators.min(1)]],
   });
 
@@ -52,7 +51,6 @@ export class TestNew {
         language: value.language,
         instructionsHtml: value.instructionsHtml,
         starterCode: value.starterCode,
-        aiTrapPhrase: value.aiTrapPhrase || undefined,
         durationMinutes: value.durationMinutes,
       })
       .subscribe({

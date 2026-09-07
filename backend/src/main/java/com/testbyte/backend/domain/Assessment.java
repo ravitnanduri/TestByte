@@ -39,9 +39,6 @@ public class Assessment {
     @Column(name = "starter_code", nullable = false, columnDefinition = "TEXT")
     private String starterCode;
 
-    @Column(name = "ai_trap_phrase")
-    private String aiTrapPhrase;
-
     @Column(name = "duration_minutes", nullable = false)
     private Integer durationMinutes;
 
@@ -61,23 +58,5 @@ public class Assessment {
         if (createdAt == null) {
             createdAt = Instant.now();
         }
-    }
-
-    /**
-     * 1-based line number within starterCode containing the AI-trap phrase, or null if there is no
-     * trap phrase or it isn't found. Used to visually hide that line from candidates in the editor
-     * without ever sending the trap phrase itself to the browser.
-     */
-    public Integer findAiTrapLineNumber() {
-        if (aiTrapPhrase == null || aiTrapPhrase.isBlank() || starterCode == null) {
-            return null;
-        }
-        String[] lines = starterCode.split("\n", -1);
-        for (int i = 0; i < lines.length; i++) {
-            if (lines[i].contains(aiTrapPhrase)) {
-                return i + 1;
-            }
-        }
-        return null;
     }
 }

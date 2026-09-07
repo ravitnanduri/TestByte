@@ -10,7 +10,6 @@ public record CreateAssessmentRequest(
         @NotNull AssessmentLanguage language,
         @NotBlank String instructionsHtml,
         @NotBlank String starterCode,
-        String aiTrapPhrase,
         @NotNull @Min(1) Integer durationMinutes
 ) {
 }

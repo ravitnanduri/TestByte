@@ -6,7 +6,6 @@ export interface Assessment {
   language: AssessmentLanguage;
   instructionsHtml: string;
   starterCode: string;
-  aiTrapPhrase: string | null;
   durationMinutes: number;
   createdAt: string;
 }
@@ -16,6 +15,5 @@ export interface CreateAssessmentRequest {
   language: AssessmentLanguage;
   instructionsHtml: string;
   starterCode: string;
-  aiTrapPhrase?: string;
   durationMinutes: number;
 }

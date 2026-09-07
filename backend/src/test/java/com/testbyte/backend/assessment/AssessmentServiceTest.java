@@ -42,14 +42,13 @@ class AssessmentServiceTest {
                 .language(AssessmentLanguage.JAVA)
                 .instructionsHtml("<p>old</p>")
                 .starterCode("old code")
-                .aiTrapPhrase("oldTrap")
                 .durationMinutes(10)
                 .active(true)
                 .build();
         when(assessmentRepository.findById(1L)).thenReturn(Optional.of(existing));
 
         CreateAssessmentRequest request = new CreateAssessmentRequest(
-                "New title", AssessmentLanguage.PYTHON, "<p>new</p>", "new code", "newTrap", 20);
+                "New title", AssessmentLanguage.PYTHON, "<p>new</p>", "new code", 20);
 
         AssessmentResponse response = service.update(1L, request);
 
@@ -58,7 +57,6 @@ class AssessmentServiceTest {
         assertThat(response.instructionsHtml()).isEqualTo("<p>new</p>");
         assertThat(response.starterCode()).isEqualTo("new code");
         assertThat(response.durationMinutes()).isEqualTo(20);
-        assertThat(existing.getAiTrapPhrase()).isEqualTo("newTrap");
     }
 
     @Test
@@ -66,7 +64,7 @@ class AssessmentServiceTest {
         when(assessmentRepository.findById(99L)).thenReturn(Optional.empty());
 
         CreateAssessmentRequest request = new CreateAssessmentRequest(
-                "T", AssessmentLanguage.JAVA, "<p>i</p>", "code", null, 10);
+                "T", AssessmentLanguage.JAVA, "<p>i</p>", "code", 10);
 
         assertThatThrownBy(() -> service.update(99L, request)).isInstanceOf(NotFoundException.class);
     }

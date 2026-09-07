@@ -27,7 +27,6 @@ export class TestEdit implements OnInit {
     language: this.fb.nonNullable.control<AssessmentLanguage>('JAVA', Validators.required),
     instructionsHtml: ['', Validators.required],
     starterCode: ['', Validators.required],
-    aiTrapPhrase: [''],
     durationMinutes: [10, [Validators.required, Validators.min(1)]],
   });
 
@@ -49,7 +48,6 @@ export class TestEdit implements OnInit {
           language: test.language,
           instructionsHtml: test.instructionsHtml,
           starterCode: test.starterCode,
-          aiTrapPhrase: test.aiTrapPhrase ?? '',
           durationMinutes: test.durationMinutes,
         });
         this.loading.set(false);
@@ -77,7 +75,6 @@ export class TestEdit implements OnInit {
         language: value.language,
         instructionsHtml: value.instructionsHtml,
         starterCode: value.starterCode,
-        aiTrapPhrase: value.aiTrapPhrase || undefined,
         durationMinutes: value.durationMinutes,
       })
       .subscribe({

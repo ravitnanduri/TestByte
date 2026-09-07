@@ -53,7 +53,6 @@ export interface PublicAssignment {
   language: AssessmentLanguage;
   instructionsHtml: string;
   starterCode: string;
-  hiddenLineNumber: number | null;
   durationMinutes: number;
   status: AssignmentStatus;
   startedAt: string | null;

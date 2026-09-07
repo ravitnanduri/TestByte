@@ -39,7 +39,6 @@ public class AssessmentService {
                 .language(request.language())
                 .instructionsHtml(request.instructionsHtml())
                 .starterCode(request.starterCode())
-                .aiTrapPhrase(request.aiTrapPhrase())
                 .durationMinutes(request.durationMinutes())
                 .createdBy(createdBy)
                 .active(true)
@@ -65,7 +64,6 @@ public class AssessmentService {
         assessment.setLanguage(request.language());
         assessment.setInstructionsHtml(request.instructionsHtml());
         assessment.setStarterCode(request.starterCode());
-        assessment.setAiTrapPhrase(request.aiTrapPhrase());
         assessment.setDurationMinutes(request.durationMinutes());
         assessmentRepository.save(assessment);
         return AssessmentResponse.from(assessment);
