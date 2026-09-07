@@ -31,7 +31,6 @@ export interface AssignmentReview {
   instructionsHtml: string;
   starterCode: string;
   submittedCode: string | null;
-  possibleAiFlag: boolean;
   status: AssignmentStatus;
   createdAt: string;
   startedAt: string | null;

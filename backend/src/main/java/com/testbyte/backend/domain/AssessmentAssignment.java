@@ -50,10 +50,6 @@ public class AssessmentAssignment {
     @Column(name = "submitted_code", columnDefinition = "TEXT")
     private String submittedCode;
 
-    @Column(name = "possible_ai_flag", nullable = false)
-    @Builder.Default
-    private boolean possibleAiFlag = false;
-
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 

@@ -140,13 +140,9 @@ public class AssignmentService {
             throw new ConflictException("This test has already been submitted");
         }
 
-        String trapPhrase = assignment.getAssessment().getAiTrapPhrase();
-        boolean possibleAiFlag = trapPhrase != null && !trapPhrase.isBlank() && code.contains(trapPhrase);
-
         assignment.setSubmittedCode(code);
         assignment.setStatus(AssignmentStatus.SUBMITTED);
         assignment.setSubmittedAt(Instant.now());
-        assignment.setPossibleAiFlag(possibleAiFlag);
         assignment.setProctoringEventsJson(proctoringEvents);
         assignmentRepository.save(assignment);
 

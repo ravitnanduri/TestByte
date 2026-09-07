@@ -79,27 +79,16 @@ class AssignmentServiceTest {
     }
 
     @Test
-    void submitFlagsSubmissionWhenAiTrapPhrasePresent() {
+    void submitMarksAssignmentSubmittedAndEmailsRecruiter() {
         Assessment assessment = assessmentWithTrap("computeTotal");
         AssessmentAssignment a = assignment(assessment, AssignmentStatus.IN_PROGRESS, Instant.now().plus(1, ChronoUnit.DAYS));
         when(assignmentRepository.findByToken(a.getToken())).thenReturn(Optional.of(a));
 
         service.submit(a.getToken(), "public double computeTotal() { return 0; }", "[]");
 
-        assertThat(a.isPossibleAiFlag()).isTrue();
         assertThat(a.getStatus()).isEqualTo(AssignmentStatus.SUBMITTED);
+        assertThat(a.getSubmittedCode()).isEqualTo("public double computeTotal() { return 0; }");
         verify(emailService).sendSubmissionReviewEmail(any(), any(), any(), any(), any());
-    }
-
-    @Test
-    void submitDoesNotFlagCleanSubmission() {
-        Assessment assessment = assessmentWithTrap("computeTotal");
-        AssessmentAssignment a = assignment(assessment, AssignmentStatus.IN_PROGRESS, Instant.now().plus(1, ChronoUnit.DAYS));
-        when(assignmentRepository.findByToken(a.getToken())).thenReturn(Optional.of(a));
-
-        service.submit(a.getToken(), "public double calculateTotal() { return 0; }", "[]");
-
-        assertThat(a.isPossibleAiFlag()).isFalse();
     }
 
     @Test
