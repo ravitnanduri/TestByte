@@ -10,24 +10,24 @@
     }
 
     @if (!successMessage()) {
-      <form [formGroup]="form" (ngSubmit)="submit()">
+      <form (submit)="$event.preventDefault(); submit()">
         <div class="form-field">
           <label for="name">Full name</label>
-          <input id="name" type="text" formControlName="name" autocomplete="name" />
+          <input #nameInput id="name" type="text" autocomplete="name" />
         </div>
 
         <div class="form-field">
           <label for="email">Email</label>
-          <input id="email" type="email" formControlName="email" autocomplete="email" />
+          <input #emailInput id="email" type="email" autocomplete="email" />
         </div>
 
         <div class="form-field">
           <label for="password">Password</label>
-          <input id="password" type="password" formControlName="password" autocomplete="new-password" />
+          <input #passwordInput id="password" type="password" autocomplete="new-password" />
           <small style="color: var(--color-text-muted);">At least 8 characters</small>
         </div>
 
-        <button class="btn btn-primary" type="submit" [disabled]="form.invalid || loading()" style="width: 100%;">
+        <button class="btn btn-primary" type="submit" [disabled]="loading()" style="width: 100%;">
           {{ loading() ? 'Creating account...' : 'Sign up' }}
         </button>
       </form>
