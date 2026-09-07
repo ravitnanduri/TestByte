@@ -6,6 +6,7 @@ import com.testbyte.backend.admin.dto.SettingsResponse;
 import com.testbyte.backend.admin.dto.UpdateSettingsRequest;
 import com.testbyte.backend.security.AuthPrincipal;
 import jakarta.validation.Valid;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -27,13 +28,15 @@ public class AdminController {
     }
 
     @PostMapping("/pending-recruiters/{id}/approve")
-    public void approve(@PathVariable Long id) {
+    public ResponseEntity<Void> approve(@PathVariable Long id) {
         adminService.approveRecruiter(id);
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/pending-recruiters/{id}/reject")
-    public void reject(@PathVariable Long id) {
+    public ResponseEntity<Void> reject(@PathVariable Long id) {
         adminService.rejectRecruiter(id);
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/settings")
@@ -48,8 +51,9 @@ public class AdminController {
     }
 
     @PostMapping("/invite-admin")
-    public void inviteAdmin(@Valid @RequestBody InviteAdminRequest request,
-                             @AuthenticationPrincipal AuthPrincipal principal) {
+    public ResponseEntity<Void> inviteAdmin(@Valid @RequestBody InviteAdminRequest request,
+                                             @AuthenticationPrincipal AuthPrincipal principal) {
         adminService.inviteAdmin(request.email(), principal.userId());
+        return ResponseEntity.noContent().build();
     }
 }

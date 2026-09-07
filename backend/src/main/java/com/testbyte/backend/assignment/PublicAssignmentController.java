@@ -3,6 +3,7 @@ package com.testbyte.backend.assignment;
 import com.testbyte.backend.assignment.dto.PublicAssignmentResponse;
 import com.testbyte.backend.assignment.dto.SubmitAssignmentRequest;
 import jakarta.validation.Valid;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -28,7 +29,8 @@ public class PublicAssignmentController {
     }
 
     @PostMapping("/{token}/submit")
-    public void submit(@PathVariable UUID token, @Valid @RequestBody SubmitAssignmentRequest request) {
+    public ResponseEntity<Void> submit(@PathVariable UUID token, @Valid @RequestBody SubmitAssignmentRequest request) {
         assignmentService.submit(token, request.code());
+        return ResponseEntity.noContent().build();
     }
 }

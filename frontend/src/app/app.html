@@ -3,9 +3,7 @@
 
   @if (auth.isLoggedIn()) {
     <nav>
-      @if (auth.role() === 'RECRUITER') {
-        <a routerLink="/recruiter/dashboard">Dashboard</a>
-      }
+      <a routerLink="/recruiter/dashboard">Dashboard</a>
       @if (auth.role() === 'ADMIN') {
         <a routerLink="/admin/pending-approvals">Admin</a>
       }
