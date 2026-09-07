@@ -69,15 +69,25 @@ public class AssignmentService {
         return AssignmentSummaryResponse.from(assignment, frontendBaseUrl);
     }
 
-    public List<AssignmentSummaryResponse> listForRecruiter(Long recruiterId) {
-        User recruiter = userRepository.findById(recruiterId)
-                .orElseThrow(() -> new NotFoundException("Recruiter not found"));
-        return assignmentRepository.findByRecruiterOrderByCreatedAtDesc(recruiter).stream()
+    // Not readOnly: markExpiredIfNeeded below opportunistically persists PENDING/IN_PROGRESS -> EXPIRED
+    // transitions, and a readOnly transaction's manual flush mode would silently drop that write.
+    @Transactional
+    public List<AssignmentSummaryResponse> listAssignments(Long currentUserId, Role currentUserRole) {
+        List<AssessmentAssignment> assignments;
+        if (currentUserRole == Role.ADMIN) {
+            assignments = assignmentRepository.findAllByOrderByCreatedAtDesc();
+        } else {
+            User recruiter = userRepository.findById(currentUserId)
+                    .orElseThrow(() -> new NotFoundException("Recruiter not found"));
+            assignments = assignmentRepository.findByRecruiterOrderByCreatedAtDesc(recruiter);
+        }
+        return assignments.stream()
                 .peek(this::markExpiredIfNeeded)
                 .map(a -> AssignmentSummaryResponse.from(a, frontendBaseUrl))
                 .toList();
     }
 
+    @Transactional
     public AssignmentReviewResponse getForReview(Long assignmentId, Long currentUserId, Role currentUserRole) {
         AssessmentAssignment assignment = assignmentRepository.findById(assignmentId)
                 .orElseThrow(() -> new NotFoundException("Assignment not found"));
@@ -91,6 +101,7 @@ public class AssignmentService {
         return AssignmentReviewResponse.from(assignment);
     }
 
+    @Transactional
     public PublicAssignmentResponse getPublicByToken(UUID token) {
         AssessmentAssignment assignment = findByToken(token);
         markExpiredIfNeeded(assignment);
@@ -138,7 +149,9 @@ public class AssignmentService {
         assignment.setPossibleAiFlag(possibleAiFlag);
         assignmentRepository.save(assignment);
 
-        emailService.sendSubmissionReviewEmail(assignment.getRecruiter(), assignment);
+        User recruiter = assignment.getRecruiter();
+        emailService.sendSubmissionReviewEmail(recruiter.getName(), recruiter.getEmail(), assignment.getId(),
+                assignment.getCandidateName(), assignment.getRoleAppliedFor());
     }
 
     private AssessmentAssignment findByToken(UUID token) {

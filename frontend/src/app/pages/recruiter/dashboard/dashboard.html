@@ -1,6 +1,6 @@
 <div class="page">
   <div style="display: flex; justify-content: space-between; align-items: center;">
-    <h2>Your scheduled assessments</h2>
+    <h2>{{ auth.role() === 'ADMIN' ? 'All scheduled assessments' : 'Your scheduled assessments' }}</h2>
     <nav style="display: flex; gap: 12px;">
       <a routerLink="/recruiter/tests/new" class="btn btn-secondary">New test</a>
       <a routerLink="/recruiter/schedule" class="btn btn-primary">Schedule test</a>
@@ -27,6 +27,9 @@
             <th>Candidate</th>
             <th>Role</th>
             <th>Test</th>
+            @if (auth.role() === 'ADMIN') {
+              <th>Scheduled by</th>
+            }
             <th>Status</th>
             <th>Scheduled</th>
             <th></th>
@@ -38,6 +41,9 @@
               <td>{{ a.candidateName }}</td>
               <td>{{ a.roleAppliedFor }}</td>
               <td>{{ a.testTitle }}</td>
+              @if (auth.role() === 'ADMIN') {
+                <td>{{ a.recruiterName }}</td>
+              }
               <td><span [class]="badgeClass(a.status)">{{ a.status }}</span></td>
               <td>{{ a.createdAt | date: 'medium' }}</td>
               <td style="display: flex; gap: 8px;">

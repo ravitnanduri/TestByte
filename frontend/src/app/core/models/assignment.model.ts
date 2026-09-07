@@ -17,6 +17,8 @@ export interface AssignmentSummary {
   link: string;
   createdAt: string;
   expiresAt: string;
+  recruiterName: string;
+  recruiterEmail: string;
 }
 
 export interface AssignmentReview {

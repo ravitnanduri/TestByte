@@ -74,7 +74,8 @@ class AuthServiceTest {
 
         assertThat(response.status()).isEqualTo(UserStatus.PENDING);
         verify(userRepository).save(argThat(u -> u.getRole() == Role.RECRUITER && u.getStatus() == UserStatus.PENDING));
-        verify(emailService).sendRecruiterPendingApprovalEmail(eq("approver@example.com"), any(User.class));
+        verify(emailService).sendRecruiterPendingApprovalEmail(
+                eq("approver@example.com"), eq("Grace"), eq("grace@example.com"));
     }
 
     @Test

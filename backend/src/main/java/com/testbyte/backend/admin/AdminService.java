@@ -50,7 +50,7 @@ public class AdminService {
         User user = findPendingUser(userId);
         user.setStatus(UserStatus.APPROVED);
         userRepository.save(user);
-        emailService.sendApprovalDecisionEmail(user, true);
+        emailService.sendApprovalDecisionEmail(user.getName(), user.getEmail(), true);
     }
 
     @Transactional
@@ -58,7 +58,7 @@ public class AdminService {
         User user = findPendingUser(userId);
         user.setStatus(UserStatus.REJECTED);
         userRepository.save(user);
-        emailService.sendApprovalDecisionEmail(user, false);
+        emailService.sendApprovalDecisionEmail(user.getName(), user.getEmail(), false);
     }
 
     private User findPendingUser(Long userId) {

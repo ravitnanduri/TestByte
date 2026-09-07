@@ -28,7 +28,7 @@ public class AssignmentController {
 
     @GetMapping
     public List<AssignmentSummaryResponse> list(@AuthenticationPrincipal AuthPrincipal principal) {
-        return assignmentService.listForRecruiter(principal.userId());
+        return assignmentService.listAssignments(principal.userId(), principal.role());
     }
 
     @GetMapping("/{id}")

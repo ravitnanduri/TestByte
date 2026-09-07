@@ -1,7 +1,8 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { AssignmentService } from '../../../core/services/assignment.service';
+import { AuthService } from '../../../core/services/auth.service';
 import { AssignmentSummary } from '../../../core/models/assignment.model';
 
 @Component({
@@ -10,12 +11,13 @@ import { AssignmentSummary } from '../../../core/models/assignment.model';
   templateUrl: './dashboard.html',
 })
 export class Dashboard implements OnInit {
+  private assignmentService = inject(AssignmentService);
+  protected auth = inject(AuthService);
+
   assignments = signal<AssignmentSummary[]>([]);
   loading = signal(true);
   error = signal<string | null>(null);
   copiedId = signal<number | null>(null);
-
-  constructor(private assignmentService: AssignmentService) {}
 
   ngOnInit(): void {
     this.assignmentService.list().subscribe({
@@ -24,7 +26,7 @@ export class Dashboard implements OnInit {
         this.loading.set(false);
       },
       error: () => {
-        this.error.set('Failed to load your scheduled assessments.');
+        this.error.set('Failed to load scheduled assessments.');
         this.loading.set(false);
       },
     });

@@ -73,7 +73,8 @@ public class AuthService {
                     "Account created as the first administrator. You can log in now.");
         }
 
-        emailService.sendRecruiterPendingApprovalEmail(appSettingsService.getApproverNotificationEmail(), user);
+        emailService.sendRecruiterPendingApprovalEmail(appSettingsService.getApproverNotificationEmail(),
+                user.getName(), user.getEmail());
         return new SignupResponse(UserStatus.PENDING,
                 "Account created. An administrator must approve it before you can log in.");
     }

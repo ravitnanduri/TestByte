@@ -13,7 +13,9 @@ public record AssignmentSummaryResponse(
         AssignmentStatus status,
         String link,
         Instant createdAt,
-        Instant expiresAt
+        Instant expiresAt,
+        String recruiterName,
+        String recruiterEmail
 ) {
     public static AssignmentSummaryResponse from(AssessmentAssignment assignment, String frontendBaseUrl) {
         return new AssignmentSummaryResponse(
@@ -24,7 +26,9 @@ public record AssignmentSummaryResponse(
                 assignment.getStatus(),
                 frontendBaseUrl + "/test/" + assignment.getToken(),
                 assignment.getCreatedAt(),
-                assignment.getExpiresAt()
+                assignment.getExpiresAt(),
+                assignment.getRecruiter().getName(),
+                assignment.getRecruiter().getEmail()
         );
     }
 }

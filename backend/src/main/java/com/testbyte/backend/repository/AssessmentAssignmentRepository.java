@@ -11,4 +11,5 @@ import java.util.UUID;
 public interface AssessmentAssignmentRepository extends JpaRepository<AssessmentAssignment, Long> {
     Optional<AssessmentAssignment> findByToken(UUID token);
     List<AssessmentAssignment> findByRecruiterOrderByCreatedAtDesc(User recruiter);
+    List<AssessmentAssignment> findAllByOrderByCreatedAtDesc();
 }
