@@ -109,6 +109,22 @@ own). Backend/frontend test suites both passing.
   screenshot anyway, and it isn't needed now that there's no AI-trap mechanism for it to conflict with.
 - Test edit history/versioning — edits apply live, no snapshot of what a candidate was actually shown.
 
+## Render deploy gotcha: rapid-fire pushes can deploy out of order
+
+Pushing several commits to `main` in quick succession once caused Render to end up serving a build from
+an *older* commit even though a newer one had already run its Flyway migrations against the database —
+producing a genuinely confusing state: the DB schema was ahead of what the running JAR's entities
+expected (`Schema validation: missing column [ai_trap_phrase] in table [tests]`, because that commit's
+migration had already dropped the column, but the live app was built from before the entity was updated
+to match). Diagnosed via the Render logs: Flyway logging `Schema "public" has a version (N) that is newer
+than the latest available migration (N-1)!` is the tell — it means the running JAR's bundled migrations
+don't go as far as what's already been applied to the database. **Manual Deploy → "Clear build cache &
+deploy" did not fix this** (it rebuilt whatever commit the service already had pinned, not necessarily
+`main`'s current HEAD) — **Manual Deploy → "Deploy latest commit" did**, since it explicitly re-resolves
+and checks out the newest commit before building. If a schema-validation error like this ever shows up
+again right after a burst of pushes, check the Flyway log lines for that "newer than latest available
+migration" warning first, and reach for "Deploy latest commit" specifically, not just a cache-clear.
+
 ## Known issue: email delivery
 
 Zoho SMTP sends currently **time out** from Render. Diagnosed as very likely an infrastructure-level
