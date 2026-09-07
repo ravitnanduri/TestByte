@@ -1,0 +1,59 @@
+<div class="page" style="max-width: 560px;">
+  <p><a routerLink="/recruiter/dashboard">&larr; Back to dashboard</a></p>
+  <h2>Schedule a test</h2>
+
+  <div class="card">
+    @if (loadError()) {
+      <div class="alert alert-error">{{ loadError() }}</div>
+    }
+    @if (error()) {
+      <div class="alert alert-error">{{ error() }}</div>
+    }
+
+    @if (created()) {
+      <div class="alert alert-success">Test scheduled for {{ created()!.candidateName }}.</div>
+      <div class="form-field">
+        <label>Candidate link</label>
+        <input type="text" [value]="created()!.link" readonly />
+      </div>
+      <div style="display: flex; gap: 12px;">
+        <button class="btn btn-primary" (click)="copyLink()">{{ copied() ? 'Copied!' : 'Copy link' }}</button>
+        <button class="btn btn-secondary" (click)="scheduleAnother()">Schedule another</button>
+      </div>
+    } @else if (loading()) {
+      <p>Loading tests...</p>
+    } @else if (loadError()) {
+      <!-- error already shown above -->
+    } @else if (tests().length === 0) {
+      <p style="color: var(--color-text-muted);">
+        No tests available yet. <a routerLink="/recruiter/tests/new">Create one first</a>.
+      </p>
+    } @else {
+      <form [formGroup]="form" (ngSubmit)="submit()">
+        <div class="form-field">
+          <label for="test">Test</label>
+          <select id="test" formControlName="testId">
+            <option [ngValue]="null" disabled>Select a test</option>
+            @for (t of tests(); track t.id) {
+              <option [ngValue]="t.id">{{ t.title }} ({{ t.language }}, {{ t.durationMinutes }} min)</option>
+            }
+          </select>
+        </div>
+
+        <div class="form-field">
+          <label for="candidateName">Candidate name</label>
+          <input id="candidateName" type="text" formControlName="candidateName" />
+        </div>
+
+        <div class="form-field">
+          <label for="roleAppliedFor">Role applied for</label>
+          <input id="roleAppliedFor" type="text" formControlName="roleAppliedFor" />
+        </div>
+
+        <button class="btn btn-primary" type="submit" [disabled]="form.invalid || saving()">
+          {{ saving() ? 'Scheduling...' : 'Generate link' }}
+        </button>
+      </form>
+    }
+  </div>
+</div>

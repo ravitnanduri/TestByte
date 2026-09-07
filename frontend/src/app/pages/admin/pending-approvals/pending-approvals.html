@@ -1,0 +1,62 @@
+<div class="page">
+  <div style="display: flex; justify-content: space-between; align-items: center;">
+    <h2>Pending recruiter approvals</h2>
+    <nav style="display: flex; gap: 12px;">
+      <a routerLink="/admin/settings" class="btn btn-secondary">Settings</a>
+      <a routerLink="/admin/invite-admin" class="btn btn-secondary">Invite admin</a>
+    </nav>
+  </div>
+
+  @if (loadError()) {
+    <div class="alert alert-error">{{ loadError() }}</div>
+  }
+  @if (actionError()) {
+    <div class="alert alert-error">{{ actionError() }}</div>
+  }
+
+  <div class="card">
+    @if (loading()) {
+      <p>Loading...</p>
+    } @else if (loadError()) {
+      <!-- error already shown above -->
+    } @else if (recruiters().length === 0) {
+      <p style="color: var(--color-text-muted);">No recruiters are waiting for approval.</p>
+    } @else {
+      <table>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Requested</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (r of recruiters(); track r.id) {
+            <tr>
+              <td>{{ r.name }}</td>
+              <td>{{ r.email }}</td>
+              <td>{{ r.createdAt | date: 'medium' }}</td>
+              <td style="display: flex; gap: 8px;">
+                <button
+                  class="btn btn-primary"
+                  [disabled]="actioningId() === r.id"
+                  (click)="approve(r.id)"
+                >
+                  Approve
+                </button>
+                <button
+                  class="btn btn-danger"
+                  [disabled]="actioningId() === r.id"
+                  (click)="reject(r.id)"
+                >
+                  Reject
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    }
+  </div>
+</div>

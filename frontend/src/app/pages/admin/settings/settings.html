@@ -1,0 +1,31 @@
+<div class="page" style="max-width: 480px;">
+  <p><a routerLink="/admin/pending-approvals">&larr; Back</a></p>
+  <h2>Admin settings</h2>
+
+  <div class="card">
+    @if (error()) {
+      <div class="alert alert-error">{{ error() }}</div>
+    }
+    @if (saved()) {
+      <div class="alert alert-success">Settings saved.</div>
+    }
+
+    @if (loading()) {
+      <p>Loading...</p>
+    } @else {
+      <form [formGroup]="form" (ngSubmit)="submit()">
+        <div class="form-field">
+          <label for="approverEmail">Approver notification email</label>
+          <input id="approverEmail" type="email" formControlName="approverNotificationEmail" />
+          <small style="color: var(--color-text-muted);">
+            New recruiter signups send an approval request to this address.
+          </small>
+        </div>
+
+        <button class="btn btn-primary" type="submit" [disabled]="form.invalid || saving()">
+          {{ saving() ? 'Saving...' : 'Save' }}
+        </button>
+      </form>
+    }
+  </div>
+</div>

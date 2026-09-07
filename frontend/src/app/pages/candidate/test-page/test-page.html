@@ -1,0 +1,56 @@
+<div class="page">
+  @if (loading()) {
+    <p>Loading...</p>
+  } @else if (error()) {
+    <div class="alert alert-error">{{ error() }}</div>
+  } @else if (submitted()) {
+    <div class="card">
+      <h2>Thanks, {{ assignment()?.candidateName }}!</h2>
+      <p>Your answer has been submitted. You may close this page.</p>
+    </div>
+  } @else if (assignment(); as a) {
+    @if (a.status === 'SUBMITTED') {
+      <div class="card">
+        <h2>Already submitted</h2>
+        <p>This test has already been submitted. You may close this page.</p>
+      </div>
+    } @else if (a.status === 'EXPIRED') {
+      <div class="card">
+        <h2>Link expired</h2>
+        <p>This test link is no longer valid. Please contact the recruiter for a new one.</p>
+      </div>
+    } @else if (a.status === 'PENDING') {
+      <div class="card">
+        <h2>{{ a.testTitle }}</h2>
+        <p style="color: var(--color-text-muted);">
+          Hi {{ a.candidateName }}, this exercise takes about {{ a.durationMinutes }} minutes.
+          The timer starts as soon as you click Start.
+        </p>
+        <div [innerHTML]="a.instructionsHtml"></div>
+        <button class="btn btn-primary" (click)="begin()">Start test</button>
+      </div>
+    } @else {
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+        <h2 style="margin: 0;">{{ a.testTitle }}</h2>
+        <div class="badge badge-in-progress" style="font-size: 16px; padding: 6px 14px;">
+          {{ remainingLabel() }}
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom: 20px;">
+        <div [innerHTML]="a.instructionsHtml"></div>
+      </div>
+
+      <app-monaco-editor
+        [value]="code()"
+        [language]="monacoLanguage()"
+        (valueChange)="code.set($event)"
+        style="display: block; height: 420px; margin-bottom: 16px;"
+      />
+
+      <button class="btn btn-primary" [disabled]="submitting()" (click)="submit()">
+        {{ submitting() ? 'Submitting...' : 'Submit answer' }}
+      </button>
+    }
+  }
+</div>

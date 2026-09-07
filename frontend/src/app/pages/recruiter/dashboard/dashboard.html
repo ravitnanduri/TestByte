@@ -1,0 +1,58 @@
+<div class="page">
+  <div style="display: flex; justify-content: space-between; align-items: center;">
+    <h2>Your scheduled assessments</h2>
+    <nav style="display: flex; gap: 12px;">
+      <a routerLink="/recruiter/tests/new" class="btn btn-secondary">New test</a>
+      <a routerLink="/recruiter/schedule" class="btn btn-primary">Schedule test</a>
+    </nav>
+  </div>
+
+  @if (error()) {
+    <div class="alert alert-error">{{ error() }}</div>
+  }
+
+  <div class="card">
+    @if (loading()) {
+      <p>Loading...</p>
+    } @else if (error()) {
+      <!-- error already shown above -->
+    } @else if (assignments().length === 0) {
+      <p style="color: var(--color-text-muted);">
+        No tests scheduled yet. Click "Schedule test" to send one to a candidate.
+      </p>
+    } @else {
+      <table>
+        <thead>
+          <tr>
+            <th>Candidate</th>
+            <th>Role</th>
+            <th>Test</th>
+            <th>Status</th>
+            <th>Scheduled</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (a of assignments(); track a.id) {
+            <tr>
+              <td>{{ a.candidateName }}</td>
+              <td>{{ a.roleAppliedFor }}</td>
+              <td>{{ a.testTitle }}</td>
+              <td><span [class]="badgeClass(a.status)">{{ a.status }}</span></td>
+              <td>{{ a.createdAt | date: 'medium' }}</td>
+              <td style="display: flex; gap: 8px;">
+                @if (a.status === 'SUBMITTED') {
+                  <a class="btn btn-secondary" [routerLink]="['/recruiter/assignments', a.id, 'review']">Review</a>
+                } @else {
+                  <button class="btn btn-secondary" (click)="copyLink(a)">
+                    {{ copiedId() === a.id ? 'Copied!' : 'Copy link' }}
+                  </button>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    }
+  </div>
+</div>

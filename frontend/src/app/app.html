@@ -1,0 +1,20 @@
+<header class="app-header">
+  <a class="brand" routerLink="/">Test<span>Byte</span></a>
+
+  @if (auth.isLoggedIn()) {
+    <nav>
+      @if (auth.role() === 'RECRUITER') {
+        <a routerLink="/recruiter/dashboard">Dashboard</a>
+      }
+      @if (auth.role() === 'ADMIN') {
+        <a routerLink="/admin/pending-approvals">Admin</a>
+      }
+      <span class="user-email">{{ auth.currentUser()?.email }}</span>
+      <button class="btn btn-secondary" (click)="logout()">Log out</button>
+    </nav>
+  }
+</header>
+
+<main>
+  <router-outlet />
+</main>

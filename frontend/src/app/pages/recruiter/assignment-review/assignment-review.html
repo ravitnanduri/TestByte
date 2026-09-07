@@ -1,0 +1,40 @@
+<div class="page">
+  <p><a routerLink="/recruiter/dashboard">&larr; Back to dashboard</a></p>
+
+  @if (error()) {
+    <div class="alert alert-error">{{ error() }}</div>
+  }
+
+  @if (loading()) {
+    <p>Loading...</p>
+  } @else if (assignment(); as a) {
+    <h2>{{ a.candidateName }} &mdash; {{ a.roleAppliedFor }}</h2>
+    <p style="color: var(--color-text-muted);">
+      {{ a.testTitle }} ({{ a.language }}) &middot;
+      Started {{ a.startedAt | date: 'medium' }} &middot;
+      Submitted {{ a.submittedAt | date: 'medium' }}
+    </p>
+
+    @if (a.possibleAiFlag) {
+      <div class="alert alert-warning">
+        ⚠ Possible AI assistance detected: the submission contains a phrase planted only for an AI tool to
+        follow, suggesting the candidate may have pasted the exercise into an AI assistant.
+      </div>
+    }
+
+    <div class="card" style="margin-bottom: 20px;">
+      <h3 style="margin-top: 0;">Question</h3>
+      <div [innerHTML]="a.instructionsHtml"></div>
+    </div>
+
+    <div class="card">
+      <h3 style="margin-top: 0;">Submitted answer</h3>
+      <app-monaco-editor
+        [value]="a.submittedCode ?? ''"
+        [language]="monacoLanguage()"
+        [readOnly]="true"
+        style="display: block; height: 400px;"
+      />
+    </div>
+  }
+</div>

@@ -1,0 +1,28 @@
+<div class="page" style="max-width: 420px;">
+  <h2>Accept admin invite</h2>
+
+  <div class="card">
+    @if (error()) {
+      <div class="alert alert-error">{{ error() }}</div>
+    }
+
+    @if (token()) {
+      <form [formGroup]="form" (ngSubmit)="submit()">
+        <div class="form-field">
+          <label for="name">Full name</label>
+          <input id="name" type="text" formControlName="name" autocomplete="name" />
+        </div>
+
+        <div class="form-field">
+          <label for="password">Password</label>
+          <input id="password" type="password" formControlName="password" autocomplete="new-password" />
+          <small style="color: var(--color-text-muted);">At least 8 characters</small>
+        </div>
+
+        <button class="btn btn-primary" type="submit" [disabled]="form.invalid || loading()" style="width: 100%;">
+          {{ loading() ? 'Setting up...' : 'Accept invite & log in' }}
+        </button>
+      </form>
+    }
+  </div>
+</div>

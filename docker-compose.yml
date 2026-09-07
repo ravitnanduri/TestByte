@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgres:17
+    container_name: testbyte-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: testbyte
+      POSTGRES_USER: testbyte_app
+      POSTGRES_PASSWORD: testbyte_dev_pw
+    ports:
+      - "5432:5432"
+    volumes:
+      - testbyte-postgres-data:/var/lib/postgresql/data
+
+volumes:
+  testbyte-postgres-data:

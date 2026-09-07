@@ -1,0 +1,24 @@
+<div class="page" style="max-width: 480px;">
+  <p><a routerLink="/admin/pending-approvals">&larr; Back</a></p>
+  <h2>Invite an admin</h2>
+
+  <div class="card">
+    @if (error()) {
+      <div class="alert alert-error">{{ error() }}</div>
+    }
+    @if (sent()) {
+      <div class="alert alert-success">Invite sent. They'll receive an email with a link to accept it.</div>
+    }
+
+    <form [formGroup]="form" (ngSubmit)="submit()">
+      <div class="form-field">
+        <label for="email">Email</label>
+        <input id="email" type="email" formControlName="email" />
+      </div>
+
+      <button class="btn btn-primary" type="submit" [disabled]="form.invalid || sending()">
+        {{ sending() ? 'Sending...' : 'Send invite' }}
+      </button>
+    </form>
+  </div>
+</div>
