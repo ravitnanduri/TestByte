@@ -19,6 +19,7 @@ export interface AssignmentSummary {
   expiresAt: string;
   recruiterName: string;
   recruiterEmail: string;
+  reviewed: boolean;
 }
 
 export interface AssignmentReview {
@@ -35,6 +36,15 @@ export interface AssignmentReview {
   createdAt: string;
   startedAt: string | null;
   submittedAt: string | null;
+  proctoringEvents: string | null;
+  reviewComment: string | null;
+  reviewedAt: string | null;
+  reviewedByName: string | null;
+}
+
+export interface ProctoringEvent {
+  type: string;
+  timestamp: string;
 }
 
 export interface PublicAssignment {
@@ -44,6 +54,7 @@ export interface PublicAssignment {
   language: AssessmentLanguage;
   instructionsHtml: string;
   starterCode: string;
+  hiddenLineNumber: number | null;
   durationMinutes: number;
   status: AssignmentStatus;
   startedAt: string | null;

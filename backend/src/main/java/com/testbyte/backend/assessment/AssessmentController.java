@@ -5,11 +5,7 @@ import com.testbyte.backend.assessment.dto.CreateAssessmentRequest;
 import com.testbyte.backend.security.AuthPrincipal;
 import jakarta.validation.Valid;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -28,9 +24,19 @@ public class AssessmentController {
         return assessmentService.listActive();
     }
 
+    @GetMapping("/{id}")
+    public AssessmentResponse get(@PathVariable Long id) {
+        return assessmentService.getResponseById(id);
+    }
+
     @PostMapping
     public AssessmentResponse create(@Valid @RequestBody CreateAssessmentRequest request,
                                       @AuthenticationPrincipal AuthPrincipal principal) {
         return assessmentService.create(request, principal.userId());
+    }
+
+    @PutMapping("/{id}")
+    public AssessmentResponse update(@PathVariable Long id, @Valid @RequestBody CreateAssessmentRequest request) {
+        return assessmentService.update(id, request);
     }
 }

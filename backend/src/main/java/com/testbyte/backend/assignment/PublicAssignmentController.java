@@ -30,7 +30,7 @@ public class PublicAssignmentController {
 
     @PostMapping("/{token}/submit")
     public ResponseEntity<Void> submit(@PathVariable UUID token, @Valid @RequestBody SubmitAssignmentRequest request) {
-        assignmentService.submit(token, request.code());
+        assignmentService.submit(token, request.code(), request.proctoringEvents());
         return ResponseEntity.noContent().build();
     }
 }

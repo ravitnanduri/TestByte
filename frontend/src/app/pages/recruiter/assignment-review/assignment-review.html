@@ -22,12 +22,34 @@
       </div>
     }
 
+    @if (proctoringEvents().length > 0) {
+      <div class="card" style="margin-bottom: 20px;">
+        <h3 style="margin-top: 0;">Activity during the test</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Event</th>
+              <th>Time</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (e of proctoringEvents(); track $index) {
+              <tr>
+                <td>{{ eventLabel(e.type) }}</td>
+                <td>{{ e.timestamp | date: 'medium' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+
     <div class="card" style="margin-bottom: 20px;">
       <h3 style="margin-top: 0;">Question</h3>
       <div [innerHTML]="a.instructionsHtml"></div>
     </div>
 
-    <div class="card">
+    <div class="card" style="margin-bottom: 20px;">
       <h3 style="margin-top: 0;">Submitted answer</h3>
       <app-monaco-editor
         [value]="a.submittedCode ?? ''"
@@ -35,6 +57,29 @@
         [readOnly]="true"
         style="display: block; height: 400px;"
       />
+    </div>
+
+    <div class="card">
+      <h3 style="margin-top: 0;">Review notes</h3>
+      @if (a.reviewedAt) {
+        <p style="color: var(--color-text-muted); font-size: 13px;">
+          Last reviewed by {{ a.reviewedByName }} on {{ a.reviewedAt | date: 'medium' }}
+        </p>
+      }
+      @if (reviewError()) {
+        <div class="alert alert-error">{{ reviewError() }}</div>
+      }
+      <div class="form-field">
+        <textarea
+          rows="4"
+          [value]="commentDraft()"
+          (input)="commentDraft.set($any($event.target).value)"
+          placeholder="e.g. Solid solution, handles edge cases well. Moving to next round."
+        ></textarea>
+      </div>
+      <button class="btn btn-primary" [disabled]="savingReview() || !commentDraft().trim()" (click)="saveReview()">
+        {{ savingReview() ? 'Saving...' : (a.reviewedAt ? 'Update review' : 'Save review') }}
+      </button>
     </div>
   }
 </div>

@@ -1,7 +1,7 @@
 import { Component, OnDestroy, OnInit, computed, signal } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { AssignmentService } from '../../../core/services/assignment.service';
-import { PublicAssignment } from '../../../core/models/assignment.model';
+import { PublicAssignment, ProctoringEvent } from '../../../core/models/assignment.model';
 import { MonacoEditor } from '../../../shared/monaco-editor/monaco-editor';
 import { toMonacoLanguage } from '../../../shared/monaco-editor/language-map';
 
@@ -14,6 +14,7 @@ export class TestPage implements OnInit, OnDestroy {
   private token = '';
   private timerHandle?: ReturnType<typeof setInterval>;
   private deadline: number | null = null;
+  private proctoringEvents: ProctoringEvent[] = [];
 
   assignment = signal<PublicAssignment | null>(null);
   code = signal('');
@@ -46,10 +47,12 @@ export class TestPage implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.token = this.route.snapshot.paramMap.get('token') ?? '';
     this.load();
+    this.registerProctoringListeners();
   }
 
   ngOnDestroy(): void {
     if (this.timerHandle) clearInterval(this.timerHandle);
+    this.unregisterProctoringListeners();
   }
 
   private load(): void {
@@ -101,7 +104,8 @@ export class TestPage implements OnInit, OnDestroy {
   submit(): void {
     if (this.submitting() || this.submitted()) return;
     this.submitting.set(true);
-    this.assignmentService.submit(this.token, this.code()).subscribe({
+    const eventsJson = JSON.stringify(this.proctoringEvents);
+    this.assignmentService.submit(this.token, this.code(), eventsJson).subscribe({
       next: () => {
         this.submitting.set(false);
         this.submitted.set(true);
@@ -112,5 +116,31 @@ export class TestPage implements OnInit, OnDestroy {
         this.error.set(err.error?.message ?? 'Failed to submit your answer.');
       },
     });
+  }
+
+  private recordEvent = (type: string) => {
+    this.proctoringEvents.push({ type, timestamp: new Date().toISOString() });
+  };
+
+  private onVisibilityChange = () => {
+    this.recordEvent(document.hidden ? 'tab_hidden' : 'tab_visible');
+  };
+  private onWindowBlur = () => this.recordEvent('window_blur');
+  private onWindowFocus = () => this.recordEvent('window_focus');
+  private onPaste = () => this.recordEvent('paste_attempt');
+
+  private registerProctoringListeners(): void {
+    document.addEventListener('visibilitychange', this.onVisibilityChange);
+    window.addEventListener('blur', this.onWindowBlur);
+    window.addEventListener('focus', this.onWindowFocus);
+    // Capture phase so this fires regardless of what handles (or stops) the event afterward.
+    document.addEventListener('paste', this.onPaste, true);
+  }
+
+  private unregisterProctoringListeners(): void {
+    document.removeEventListener('visibilitychange', this.onVisibilityChange);
+    window.removeEventListener('blur', this.onWindowBlur);
+    window.removeEventListener('focus', this.onWindowFocus);
+    document.removeEventListener('paste', this.onPaste, true);
   }
 }

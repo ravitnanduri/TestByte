@@ -84,7 +84,7 @@ class AssignmentServiceTest {
         AssessmentAssignment a = assignment(assessment, AssignmentStatus.IN_PROGRESS, Instant.now().plus(1, ChronoUnit.DAYS));
         when(assignmentRepository.findByToken(a.getToken())).thenReturn(Optional.of(a));
 
-        service.submit(a.getToken(), "public double computeTotal() { return 0; }");
+        service.submit(a.getToken(), "public double computeTotal() { return 0; }", "[]");
 
         assertThat(a.isPossibleAiFlag()).isTrue();
         assertThat(a.getStatus()).isEqualTo(AssignmentStatus.SUBMITTED);
@@ -97,9 +97,21 @@ class AssignmentServiceTest {
         AssessmentAssignment a = assignment(assessment, AssignmentStatus.IN_PROGRESS, Instant.now().plus(1, ChronoUnit.DAYS));
         when(assignmentRepository.findByToken(a.getToken())).thenReturn(Optional.of(a));
 
-        service.submit(a.getToken(), "public double calculateTotal() { return 0; }");
+        service.submit(a.getToken(), "public double calculateTotal() { return 0; }", "[]");
 
         assertThat(a.isPossibleAiFlag()).isFalse();
+    }
+
+    @Test
+    void submitStoresProctoringEvents() {
+        Assessment assessment = assessmentWithTrap(null);
+        AssessmentAssignment a = assignment(assessment, AssignmentStatus.IN_PROGRESS, Instant.now().plus(1, ChronoUnit.DAYS));
+        when(assignmentRepository.findByToken(a.getToken())).thenReturn(Optional.of(a));
+
+        String events = "[{\"type\":\"tab_switch\",\"timestamp\":\"2026-01-01T00:00:00Z\"}]";
+        service.submit(a.getToken(), "code", events);
+
+        assertThat(a.getProctoringEventsJson()).isEqualTo(events);
     }
 
     @Test
@@ -146,5 +158,48 @@ class AssignmentServiceTest {
 
         assertThat(result).hasSize(2);
         verify(userRepository, never()).findById(any());
+    }
+
+    @Test
+    void saveReviewByAssignmentOwnerSucceeds() {
+        AssessmentAssignment a = assignment(assessmentWithTrap(null), AssignmentStatus.SUBMITTED, Instant.now().plus(1, ChronoUnit.DAYS));
+        User owner = a.getRecruiter();
+        when(assignmentRepository.findById(1L)).thenReturn(Optional.of(a));
+        when(userRepository.findById(1L)).thenReturn(Optional.of(owner));
+
+        var response = service.saveReview(1L, 1L, Role.RECRUITER, "Looks good");
+
+        assertThat(response.reviewComment()).isEqualTo("Looks good");
+        assertThat(a.getReviewedAt()).isNotNull();
+        assertThat(a.getReviewedBy()).isEqualTo(owner);
+    }
+
+    @Test
+    void saveReviewByUnrelatedRecruiterIsForbidden() {
+        AssessmentAssignment a = assignment(assessmentWithTrap(null), AssignmentStatus.SUBMITTED, Instant.now().plus(1, ChronoUnit.DAYS));
+        when(assignmentRepository.findById(1L)).thenReturn(Optional.of(a));
+
+        assertThatThrownBy(() -> service.saveReview(1L, 42L, Role.RECRUITER, "note"))
+                .isInstanceOf(com.testbyte.backend.exception.ForbiddenException.class);
+    }
+
+    @Test
+    void findAiTrapLineNumberLocatesTheCommentLine() {
+        Assessment assessment = Assessment.builder()
+                .starterCode("line one\n// trap computeTotal here\nline three")
+                .aiTrapPhrase("computeTotal")
+                .build();
+
+        assertThat(assessment.findAiTrapLineNumber()).isEqualTo(2);
+    }
+
+    @Test
+    void findAiTrapLineNumberReturnsNullWhenNoTrapPhrase() {
+        Assessment assessment = Assessment.builder()
+                .starterCode("line one\nline two")
+                .aiTrapPhrase(null)
+                .build();
+
+        assertThat(assessment.findAiTrapLineNumber()).isNull();
     }
 }

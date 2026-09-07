@@ -4,6 +4,7 @@
   @if (auth.isLoggedIn()) {
     <nav>
       <a routerLink="/recruiter/dashboard">Dashboard</a>
+      <a routerLink="/recruiter/tests">Tests</a>
       @if (auth.role() === 'ADMIN') {
         <a routerLink="/admin/pending-approvals">Admin</a>
       }

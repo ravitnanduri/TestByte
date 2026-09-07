@@ -28,6 +28,10 @@ export class AssignmentService {
     return this.http.get<AssignmentReview>(`${this.baseUrl}/${id}`);
   }
 
+  saveReview(id: number, comment: string): Observable<AssignmentReview> {
+    return this.http.put<AssignmentReview>(`${this.baseUrl}/${id}/review`, { comment });
+  }
+
   getPublic(token: string): Observable<PublicAssignment> {
     return this.http.get<PublicAssignment>(`${this.publicBaseUrl}/${token}`);
   }
@@ -36,7 +40,7 @@ export class AssignmentService {
     return this.http.post<PublicAssignment>(`${this.publicBaseUrl}/${token}/start`, {});
   }
 
-  submit(token: string, code: string): Observable<void> {
-    return this.http.post<void>(`${this.publicBaseUrl}/${token}/submit`, { code });
+  submit(token: string, code: string, proctoringEvents: string): Observable<void> {
+    return this.http.post<void>(`${this.publicBaseUrl}/${token}/submit`, { code, proctoringEvents });
   }
 }

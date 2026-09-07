@@ -1,0 +1,45 @@
+<div class="page">
+  <div style="display: flex; justify-content: space-between; align-items: center;">
+    <h2>Tests</h2>
+    <a routerLink="/recruiter/tests/new" class="btn btn-primary">New test</a>
+  </div>
+
+  @if (error()) {
+    <div class="alert alert-error">{{ error() }}</div>
+  }
+
+  <div class="card">
+    @if (loading()) {
+      <p>Loading...</p>
+    } @else if (error()) {
+      <!-- error already shown above -->
+    } @else if (tests().length === 0) {
+      <p style="color: var(--color-text-muted);">
+        No tests yet. <a routerLink="/recruiter/tests/new">Create one</a>.
+      </p>
+    } @else {
+      <table>
+        <thead>
+          <tr>
+            <th>Title</th>
+            <th>Language</th>
+            <th>Duration</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (t of tests(); track t.id) {
+            <tr>
+              <td>{{ t.title }}</td>
+              <td>{{ t.language }}</td>
+              <td>{{ t.durationMinutes }} min</td>
+              <td>
+                <a class="btn btn-secondary" [routerLink]="['/recruiter/tests', t.id, 'edit']">Edit</a>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    }
+  </div>
+</div>

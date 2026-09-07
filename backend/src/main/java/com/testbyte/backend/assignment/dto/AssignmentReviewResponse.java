@@ -19,7 +19,11 @@ public record AssignmentReviewResponse(
         AssignmentStatus status,
         Instant createdAt,
         Instant startedAt,
-        Instant submittedAt
+        Instant submittedAt,
+        String proctoringEvents,
+        String reviewComment,
+        Instant reviewedAt,
+        String reviewedByName
 ) {
     public static AssignmentReviewResponse from(AssessmentAssignment assignment) {
         return new AssignmentReviewResponse(
@@ -35,7 +39,11 @@ public record AssignmentReviewResponse(
                 assignment.getStatus(),
                 assignment.getCreatedAt(),
                 assignment.getStartedAt(),
-                assignment.getSubmittedAt()
+                assignment.getSubmittedAt(),
+                assignment.getProctoringEventsJson(),
+                assignment.getReviewComment(),
+                assignment.getReviewedAt(),
+                assignment.getReviewedBy() != null ? assignment.getReviewedBy().getName() : null
         );
     }
 }

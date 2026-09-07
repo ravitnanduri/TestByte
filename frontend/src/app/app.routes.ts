@@ -34,9 +34,19 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/recruiter/dashboard/dashboard').then((m) => m.Dashboard),
   },
   {
+    path: 'recruiter/tests',
+    canActivate: [roleGuard(['RECRUITER', 'ADMIN'])],
+    loadComponent: () => import('./pages/recruiter/test-list/test-list').then((m) => m.TestList),
+  },
+  {
     path: 'recruiter/tests/new',
     canActivate: [roleGuard(['RECRUITER', 'ADMIN'])],
     loadComponent: () => import('./pages/recruiter/test-new/test-new').then((m) => m.TestNew),
+  },
+  {
+    path: 'recruiter/tests/:id/edit',
+    canActivate: [roleGuard(['RECRUITER', 'ADMIN'])],
+    loadComponent: () => import('./pages/recruiter/test-edit/test-edit').then((m) => m.TestEdit),
   },
   {
     path: 'recruiter/schedule',

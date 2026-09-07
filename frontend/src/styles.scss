@@ -179,6 +179,14 @@ a {
   color: #475569;
 }
 
+// Conceals the AI-cheating-trap line in the Monaco editor from candidates (see MonacoEditor
+// hiddenLineNumber input). Must stay selectable/copyable (no user-select:none) - the whole
+// mechanism depends on this text still reaching the clipboard when a candidate copies the code.
+.ai-trap-hidden-line {
+  color: transparent !important;
+  font-size: 1px !important;
+}
+
 table {
   width: 100%;
   border-collapse: collapse;

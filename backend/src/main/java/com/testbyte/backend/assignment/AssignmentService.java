@@ -129,7 +129,7 @@ public class AssignmentService {
     }
 
     @Transactional
-    public void submit(UUID token, String code) {
+    public void submit(UUID token, String code, String proctoringEvents) {
         AssessmentAssignment assignment = findByToken(token);
         markExpiredIfNeeded(assignment);
 
@@ -147,11 +147,34 @@ public class AssignmentService {
         assignment.setStatus(AssignmentStatus.SUBMITTED);
         assignment.setSubmittedAt(Instant.now());
         assignment.setPossibleAiFlag(possibleAiFlag);
+        assignment.setProctoringEventsJson(proctoringEvents);
         assignmentRepository.save(assignment);
 
         User recruiter = assignment.getRecruiter();
         emailService.sendSubmissionReviewEmail(recruiter.getName(), recruiter.getEmail(), assignment.getId(),
                 assignment.getCandidateName(), assignment.getRoleAppliedFor());
+    }
+
+    @Transactional
+    public AssignmentReviewResponse saveReview(Long assignmentId, Long currentUserId, Role currentUserRole,
+                                                String comment) {
+        AssessmentAssignment assignment = assignmentRepository.findById(assignmentId)
+                .orElseThrow(() -> new NotFoundException("Assignment not found"));
+
+        boolean isOwner = assignment.getRecruiter().getId().equals(currentUserId);
+        if (!isOwner && currentUserRole != Role.ADMIN) {
+            throw new ForbiddenException("You do not have access to this assignment");
+        }
+
+        User reviewer = userRepository.findById(currentUserId)
+                .orElseThrow(() -> new NotFoundException("User not found"));
+
+        assignment.setReviewComment(comment);
+        assignment.setReviewedAt(Instant.now());
+        assignment.setReviewedBy(reviewer);
+        assignmentRepository.save(assignment);
+
+        return AssignmentReviewResponse.from(assignment);
     }
 
     private AssessmentAssignment findByToken(UUID token) {

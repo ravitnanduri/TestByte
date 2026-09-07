@@ -37,10 +37,14 @@ export class MonacoEditor implements AfterViewInit, OnChanges, OnDestroy {
   @Input() value = '';
   @Input() language = 'plaintext';
   @Input() readOnly = false;
+  /** 1-based line number to render invisible (used to conceal the AI-cheating trap line). */
+  @Input() hiddenLineNumber: number | null = null;
 
   @Output() valueChange = new EventEmitter<string>();
 
   private editor: import('monaco-editor').editor.IStandaloneCodeEditor | undefined;
+  private monacoApi: typeof import('monaco-editor') | undefined;
+  private hiddenLineDecorations: import('monaco-editor').editor.IEditorDecorationsCollection | undefined;
 
   async ngAfterViewInit(): Promise<void> {
     if (!environmentReady) {
@@ -49,6 +53,7 @@ export class MonacoEditor implements AfterViewInit, OnChanges, OnDestroy {
     }
 
     const monaco = await import('monaco-editor');
+    this.monacoApi = monaco;
 
     this.editor = monaco.editor.create(this.hostRef.nativeElement, {
       value: this.value,
@@ -63,6 +68,8 @@ export class MonacoEditor implements AfterViewInit, OnChanges, OnDestroy {
     this.editor.onDidChangeModelContent(() => {
       this.valueChange.emit(this.editor!.getValue());
     });
+
+    this.applyHiddenLineDecoration();
   }
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -80,6 +87,33 @@ export class MonacoEditor implements AfterViewInit, OnChanges, OnDestroy {
     if (changes['readOnly']) {
       this.editor.updateOptions({ readOnly: this.readOnly });
     }
+    if (changes['hiddenLineNumber'] || changes['value']) {
+      this.applyHiddenLineDecoration();
+    }
+  }
+
+  private applyHiddenLineDecoration(): void {
+    if (!this.editor || !this.monacoApi) return;
+
+    if (!this.hiddenLineDecorations) {
+      this.hiddenLineDecorations = this.editor.createDecorationsCollection();
+    }
+
+    if (this.hiddenLineNumber == null) {
+      this.hiddenLineDecorations.set([]);
+      return;
+    }
+
+    this.hiddenLineDecorations.set([
+      {
+        range: new this.monacoApi.Range(this.hiddenLineNumber, 1, this.hiddenLineNumber, 1),
+        options: {
+          isWholeLine: true,
+          inlineClassName: 'ai-trap-hidden-line',
+          className: 'ai-trap-hidden-line-bg',
+        },
+      },
+    ]);
   }
 
   ngOnDestroy(): void {

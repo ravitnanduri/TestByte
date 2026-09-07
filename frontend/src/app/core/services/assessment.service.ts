@@ -14,7 +14,15 @@ export class AssessmentService {
     return this.http.get<Assessment[]>(this.baseUrl);
   }
 
+  get(id: number): Observable<Assessment> {
+    return this.http.get<Assessment>(`${this.baseUrl}/${id}`);
+  }
+
   create(request: CreateAssessmentRequest): Observable<Assessment> {
     return this.http.post<Assessment>(this.baseUrl, request);
+  }
+
+  update(id: number, request: CreateAssessmentRequest): Observable<Assessment> {
+    return this.http.put<Assessment>(`${this.baseUrl}/${id}`, request);
   }
 }

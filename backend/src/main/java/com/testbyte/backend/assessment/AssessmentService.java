@@ -53,4 +53,21 @@ public class AssessmentService {
         return assessmentRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Test not found"));
     }
+
+    public AssessmentResponse getResponseById(Long id) {
+        return AssessmentResponse.from(getById(id));
+    }
+
+    @Transactional
+    public AssessmentResponse update(Long id, CreateAssessmentRequest request) {
+        Assessment assessment = getById(id);
+        assessment.setTitle(request.title());
+        assessment.setLanguage(request.language());
+        assessment.setInstructionsHtml(request.instructionsHtml());
+        assessment.setStarterCode(request.starterCode());
+        assessment.setAiTrapPhrase(request.aiTrapPhrase());
+        assessment.setDurationMinutes(request.durationMinutes());
+        assessmentRepository.save(assessment);
+        return AssessmentResponse.from(assessment);
+    }
 }

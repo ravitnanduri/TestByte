@@ -15,7 +15,8 @@ public record AssignmentSummaryResponse(
         Instant createdAt,
         Instant expiresAt,
         String recruiterName,
-        String recruiterEmail
+        String recruiterEmail,
+        boolean reviewed
 ) {
     public static AssignmentSummaryResponse from(AssessmentAssignment assignment, String frontendBaseUrl) {
         return new AssignmentSummaryResponse(
@@ -28,7 +29,8 @@ public record AssignmentSummaryResponse(
                 assignment.getCreatedAt(),
                 assignment.getExpiresAt(),
                 assignment.getRecruiter().getName(),
-                assignment.getRecruiter().getEmail()
+                assignment.getRecruiter().getEmail(),
+                assignment.getReviewedAt() != null
         );
     }
 }

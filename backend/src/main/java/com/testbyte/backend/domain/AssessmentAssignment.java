@@ -66,6 +66,19 @@ public class AssessmentAssignment {
     @Column(name = "expires_at", nullable = false)
     private Instant expiresAt;
 
+    @Column(name = "review_comment", columnDefinition = "TEXT")
+    private String reviewComment;
+
+    @Column(name = "reviewed_at")
+    private Instant reviewedAt;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "reviewed_by")
+    private User reviewedBy;
+
+    @Column(name = "proctoring_events", columnDefinition = "TEXT")
+    private String proctoringEventsJson;
+
     @PrePersist
     void onCreate() {
         if (createdAt == null) {

@@ -44,11 +44,18 @@
               @if (auth.role() === 'ADMIN') {
                 <td>{{ a.recruiterName }}</td>
               }
-              <td><span [class]="badgeClass(a.status)">{{ a.status }}</span></td>
+              <td>
+                <span [class]="badgeClass(a.status)">{{ a.status }}</span>
+                @if (a.reviewed) {
+                  <span class="badge badge-submitted" style="margin-left: 6px;">Reviewed</span>
+                }
+              </td>
               <td>{{ a.createdAt | date: 'medium' }}</td>
               <td style="display: flex; gap: 8px;">
                 @if (a.status === 'SUBMITTED') {
-                  <a class="btn btn-secondary" [routerLink]="['/recruiter/assignments', a.id, 'review']">Review</a>
+                  <a class="btn btn-secondary" [routerLink]="['/recruiter/assignments', a.id, 'review']">
+                    {{ a.reviewed ? 'View review' : 'Review' }}
+                  </a>
                 } @else {
                   <button class="btn btn-secondary" (click)="copyLink(a)">
                     {{ copiedId() === a.id ? 'Copied!' : 'Copy link' }}
