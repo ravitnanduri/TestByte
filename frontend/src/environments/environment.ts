@@ -1,4 +1,4 @@
 export const environment = {
   production: true,
-  apiBaseUrl: 'https://api.testbyte.example.com/api',
+  apiBaseUrl: 'https://testbyte-backend.onrender.com/api',
 };
