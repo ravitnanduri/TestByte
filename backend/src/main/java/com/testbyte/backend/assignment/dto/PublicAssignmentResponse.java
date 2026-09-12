@@ -1,19 +1,16 @@
 package com.testbyte.backend.assignment.dto;
 
 import com.testbyte.backend.domain.AssessmentAssignment;
-import com.testbyte.backend.domain.AssessmentLanguage;
 import com.testbyte.backend.domain.AssignmentStatus;
 
 import java.time.Instant;
+import java.util.List;
 
 public record PublicAssignmentResponse(
         String candidateName,
         String roleAppliedFor,
         String testTitle,
-        AssessmentLanguage language,
-        String instructionsHtml,
-        String starterCode,
-        Integer durationMinutes,
+        List<PublicPage> pages,
         AssignmentStatus status,
         Instant startedAt,
         Instant expiresAt
@@ -23,10 +20,7 @@ public record PublicAssignmentResponse(
                 assignment.getCandidateName(),
                 assignment.getRoleAppliedFor(),
                 assignment.getAssessment().getTitle(),
-                assignment.getAssessment().getLanguage(),
-                assignment.getAssessment().getInstructionsHtml(),
-                assignment.getAssessment().getStarterCode(),
-                assignment.getAssessment().getDurationMinutes(),
+                assignment.getAssessment().getPages().stream().map(PublicPage::from).toList(),
                 assignment.getStatus(),
                 assignment.getStartedAt(),
                 assignment.getExpiresAt()

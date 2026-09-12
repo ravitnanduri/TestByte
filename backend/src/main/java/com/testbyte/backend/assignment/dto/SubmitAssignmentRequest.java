@@ -1,6 +1,12 @@
 package com.testbyte.backend.assignment.dto;
 
-import jakarta.validation.constraints.NotNull;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotEmpty;
 
-public record SubmitAssignmentRequest(@NotNull String code, String proctoringEvents) {
+import java.util.List;
+
+public record SubmitAssignmentRequest(
+        @NotEmpty @Valid List<AnswerRequest> answers,
+        String proctoringEvents
+) {
 }

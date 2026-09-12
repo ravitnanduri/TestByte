@@ -10,7 +10,7 @@
   } @else if (assignment(); as a) {
     <h2>{{ a.candidateName }} &mdash; {{ a.roleAppliedFor }}</h2>
     <p style="color: var(--color-text-muted);">
-      {{ a.testTitle }} ({{ a.language }}) &middot;
+      {{ a.testTitle }} &middot;
       Started {{ a.startedAt | date: 'medium' }} &middot;
       Submitted {{ a.submittedAt | date: 'medium' }}
     </p>
@@ -37,20 +37,73 @@
       </div>
     }
 
-    <div class="card" style="margin-bottom: 20px;">
-      <h3 style="margin-top: 0;">Question</h3>
-      <div [innerHTML]="a.instructionsHtml"></div>
-    </div>
+    @for (page of a.pages; track $index; let pageIndex = $index) {
+      <div class="card" style="margin-bottom: 20px;">
+        <h3 style="margin-top: 0;">Page {{ pageIndex + 1 }} ({{ page.durationMinutes }} min)</h3>
 
-    <div class="card" style="margin-bottom: 20px;">
-      <h3 style="margin-top: 0;">Submitted answer</h3>
-      <app-monaco-editor
-        [value]="a.submittedCode ?? ''"
-        [language]="monacoLanguage()"
-        [readOnly]="true"
-        style="display: block; height: 400px;"
-      />
-    </div>
+        @for (q of page.questions; track $index; let questionIndex = $index) {
+          <div style="border-top: 1px solid var(--color-border); padding-top: 16px; margin-top: 16px;">
+            <p style="color: var(--color-text-muted); font-size: 13px; margin: 0 0 8px;">
+              Question {{ questionIndex + 1 }} &middot; {{ q.type }}
+            </p>
+            <div [innerHTML]="q.prompt | markdown" style="margin-bottom: 12px;"></div>
+
+            @if (q.type === 'CODE') {
+              <app-monaco-editor
+                [value]="q.answerText ?? ''"
+                [language]="monacoLanguage(q.language)"
+                [fontSize]="q.editorFontSize"
+                [fontColor]="q.editorFontColor"
+                [readOnly]="true"
+                style="display: block; height: 320px;"
+              />
+            } @else if (q.type === 'TEXT') {
+              <div class="card" style="background: var(--color-bg);">
+                {{ q.answerText || 'No answer given.' }}
+              </div>
+            } @else if (q.type === 'MULTIPLE_CHOICE') {
+              <div>
+                @for (option of q.options; track option.id) {
+                  <div
+                    style="padding: 8px 12px; border-radius: 6px; margin-bottom: 6px;"
+                    [style.background]="option.correct ? 'var(--color-success-bg)' : 'transparent'"
+                  >
+                    @if (option.id === q.selectedOptionId) {
+                      <strong>&#10148; </strong>
+                    }
+                    {{ option.text }}
+                    @if (option.correct) {
+                      <span style="color: #047857; font-size: 12px;"> (correct)</span>
+                    }
+                  </div>
+                }
+                @if (!q.selectedOptionId) {
+                  <p style="color: var(--color-text-muted);">No option selected.</p>
+                }
+              </div>
+            }
+          </div>
+        }
+      </div>
+    }
+
+    @if (a.orphanedAnswers.length > 0) {
+      <div class="card" style="margin-bottom: 20px;">
+        <h3 style="margin-top: 0;">Other answers</h3>
+        <p style="color: var(--color-text-muted); font-size: 13px;">
+          These questions have since been edited or removed from the test, so they're shown here using
+          what the candidate saw at the time.
+        </p>
+        @for (q of a.orphanedAnswers; track $index) {
+          <div style="border-top: 1px solid var(--color-border); padding-top: 16px; margin-top: 16px;">
+            <div [innerHTML]="q.prompt | markdown" style="margin-bottom: 12px;"></div>
+            <div class="card" style="background: var(--color-bg);">
+              {{ q.answerText || q.selectedOptionText || 'No answer given.' }}
+            </div>
+          </div>
+        }
+      </div>
+    }
 
     <div class="card">
       <h3 style="margin-top: 0;">Review notes</h3>

@@ -8,6 +8,8 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -47,9 +49,6 @@ public class AssessmentAssignment {
     @Column(nullable = false, length = 20)
     private AssignmentStatus status;
 
-    @Column(name = "submitted_code", columnDefinition = "TEXT")
-    private String submittedCode;
-
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -74,6 +73,10 @@ public class AssessmentAssignment {
 
     @Column(name = "proctoring_events", columnDefinition = "TEXT")
     private String proctoringEventsJson;
+
+    @OneToMany(mappedBy = "assignment", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<AssignmentAnswer> answers = new ArrayList<>();
 
     @PrePersist
     void onCreate() {

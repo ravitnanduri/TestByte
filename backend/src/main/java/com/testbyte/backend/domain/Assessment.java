@@ -8,9 +8,12 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
- * A reusable coding test template in the test bank (DB table "tests").
+ * A reusable coding test template in the test bank (DB table "tests"): a container of one or more
+ * timed pages, each holding one or more questions.
  * Named Assessment rather than Test to avoid clashing with org.junit.jupiter.api.Test.
  */
 @Entity
@@ -29,19 +32,6 @@ public class Assessment {
     @Column(nullable = false)
     private String title;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
-    private AssessmentLanguage language;
-
-    @Column(name = "instructions_html", nullable = false, columnDefinition = "TEXT")
-    private String instructionsHtml;
-
-    @Column(name = "starter_code", nullable = false, columnDefinition = "TEXT")
-    private String starterCode;
-
-    @Column(name = "duration_minutes", nullable = false)
-    private Integer durationMinutes;
-
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "created_by")
     private User createdBy;
@@ -52,6 +42,11 @@ public class Assessment {
     @Column(nullable = false)
     @Builder.Default
     private boolean active = true;
+
+    @OneToMany(mappedBy = "test", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("pageOrder ASC")
+    @Builder.Default
+    private List<TestPage> pages = new ArrayList<>();
 
     @PrePersist
     void onCreate() {

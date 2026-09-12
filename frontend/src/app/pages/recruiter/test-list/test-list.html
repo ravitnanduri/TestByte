@@ -22,8 +22,8 @@
         <thead>
           <tr>
             <th>Title</th>
-            <th>Language</th>
-            <th>Duration</th>
+            <th>Questions</th>
+            <th>Total duration</th>
             <th></th>
           </tr>
         </thead>
@@ -31,8 +31,8 @@
           @for (t of tests(); track t.id) {
             <tr>
               <td>{{ t.title }}</td>
-              <td>{{ t.language }}</td>
-              <td>{{ t.durationMinutes }} min</td>
+              <td>{{ t.questionCount }}</td>
+              <td>{{ t.totalDurationMinutes }} min</td>
               <td>
                 <a class="btn btn-secondary" [routerLink]="['/recruiter/tests', t.id, 'edit']">Edit</a>
               </td>

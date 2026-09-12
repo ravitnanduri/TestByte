@@ -56,12 +56,75 @@ hosting setup.
   match what a recruiter remembers writing.
 - **Proctoring events are an opaque JSON blob**, not a real table. `AssessmentAssignment.proctoringEventsJson`
   (column `proctoring_events`) stores whatever JSON string the frontend sends on submit
-  (`[{type, timestamp}, ...]` — tab switches, window blur/focus, paste-into-editor) and the backend never
+  (`[{type, timestamp}, ...]` — tab switches, window blur/focus, copy/cut/paste) and the backend never
   parses it; it's passed through as-is and JSON-parsed only in `assignment-review.ts` for display. If this
   ever needs to be queried/filtered server-side, it'll need a real table instead.
+- **Paste-into-Monaco can't be reliably caught with a plain `document`-level `paste` listener.** It was
+  originally implemented that way (matching the simpler tab-switch/blur/focus listeners), but pastes into
+  Monaco specifically were sometimes silently missed -- confirmed live: Monaco's actual input-capture
+  element for a paste is a hidden textarea/edit-context node *inside* the editor, and depending on the
+  browser/Monaco version that dispatch path doesn't always bubble a conventional `ClipboardEvent` up to
+  `document` the way a plain `<textarea>` does. The fix is `MonacoEditor.pasteDetected`
+  (`shared/monaco-editor/monaco-editor.ts`), which uses Monaco's own documented `editor.onDidPaste()` API
+  instead -- Monaco's internal signal for "a paste happened here," independent of DOM bubbling. Wired via
+  `(pasteDetected)="onEditorPaste()"` on the candidate test page's CODE-question editors. The page-level
+  `document` `paste` listener still exists as a fallback for non-Monaco paste targets (the TEXT question's
+  plain `<textarea>`), and explicitly skips anything whose target is inside `.monaco-host` so the same
+  physical paste doesn't get logged twice. Copy/cut (`copy_attempt`/`cut_attempt`) don't have this problem
+  -- they're pure clipboard/selection actions independent of Monaco's text-input mechanism, so the
+  page-level `document`-capture listeners catch them reliably everywhere, Monaco included.
+- **A paste is only flagged if it didn't come from this page.** `TestPage` (`pages/candidate/test-page/
+  test-page.ts`) keeps a `copiedSnippets` set of everything the candidate has copied/cut *on this page*
+  during the test (from the instructions panel, a TEXT answer, or a CODE editor -- `MonacoEditor.
+  copyDetected`/`cutDetected` read the actual selected text straight off the model via `editor.
+  getSelection()`, since Monaco has no public `onDidCopy`/`onDidCut` to hook the way `onDidPaste` is
+  hooked). On paste, the pasted text (from `ClipboardEvent.clipboardData` for the document-level path, or
+  from `editor.getModel().getValueInRange(e.range)` for Monaco's `onDidPaste` -- not its `clipboardEvent`
+  field, which isn't reliably populated either) is compared against that set (normalized: `\r\n`→`\n`,
+  trimmed) and simply not recorded as a `paste_attempt` if it matches -- e.g. copying a snippet from the
+  instructions and pasting it into the code editor, or re-pasting something already typed, doesn't get
+  flagged. Only content that didn't originate from a copy/cut on this page counts as a real paste-in.
+  This is intentionally an exact-string match, not fuzzy -- a large pasted block won't accidentally match
+  a short previously-copied snippet unless it equals it exactly.
 - **Review comments are single/overwritable**, not a thread — `review_comment` + `reviewed_at` +
   `reviewed_by` columns get replaced wholesale on each save. The dashboard's "Reviewed" badge is just
   `reviewedAt != null` on `AssignmentSummaryResponse`.
+- **Tests are a container of pages, each holding questions, not a single question.** Originally (through
+  migration V6) a `tests` row WAS one question: one `language`/`instructions_html`/`starter_code`/
+  `duration_minutes`, one `submitted_code` per assignment. `V7__restructure_tests_into_pages_and_questions.sql`
+  replaced that with `test_pages` (each with its own `duration_minutes` -- a test is taken page by page,
+  each page timed independently) → `test_questions` (`question_type` one of `CODE`/`TEXT`/
+  `MULTIPLE_CHOICE`; `language`/`starter_code`/`editor_font_size`/`editor_font_color` only apply to
+  `CODE`) → `test_question_options` (only for `MULTIPLE_CHOICE`, one `is_correct` flag). Candidate
+  submissions became `assignment_answers`, one row per question answered. V7 migrated every pre-existing
+  test/assignment forward into this shape (page 1 / question 1, type `CODE`) rather than discarding data.
+  **Recruiters can no longer see other options' correctness from the candidate side**: `PublicQuestion`/
+  `PublicQuestionOption` (candidate-facing DTOs) deliberately omit the `correct` flag that
+  `QuestionResponse`/`ReviewQuestionAnswer` (recruiter-facing) carry -- don't accidentally reuse the
+  recruiter DTOs on a public endpoint.
+- **A submitted answer survives the recruiter later editing or deleting that exact question.**
+  `assignment_answers.question_id`/`selected_option_id` are `ON DELETE SET NULL`, and the row also
+  carries `*_snapshot` columns (prompt/type/language/selected option text+correctness) captured at
+  submit time. `AssignmentService.buildReviewResponse` walks the test's *current* live pages/questions
+  for the normal case, and separately reports any answers whose question no longer exists (via the
+  snapshot columns alone) as `orphanedAnswers` on `AssignmentReviewResponse` -- an extension of the
+  already-existing "edits aren't versioned" behavior noted above, not a new regression.
+- **Monaco's theme is a single global concept shared by every editor instance on the page** -- there is
+  no built-in per-editor theme. The editor font-color feature (so a recruiter can hand-craft a white-on-
+  white "AI trap" line now that the automated version is retired, see above) therefore can't use
+  `monaco.editor.setTheme()`/`defineTheme()` the obvious way: with several CODE questions authored on one
+  page at once, whichever editor set its theme last would repaint every other editor too. It's implemented
+  instead as a full-document `inlineClassName` decoration (`editor.createDecorationsCollection`) with a
+  CSS class injected once per distinct color into a shared `<style>` tag -- see
+  `frontend/src/app/shared/monaco-editor/monaco-editor.ts`. `fontSize` doesn't have this problem (it's a
+  real per-instance `updateOptions()` field) and is handled the normal way.
+- **Question/instructions text is plain text with a small fixed markdown-lite subset**, not HTML anymore
+  (recruiters previously had to hand-write `<p>`/`<ul>` HTML in `instructions_html`, which most won't
+  know how to do). `frontend/src/app/shared/markdown/render-markdown.ts` HTML-escapes the raw text first,
+  then re-applies only `**bold**`, `*italic*`, `` `code` ``, `- bullet` and `1. numbered` lines --
+  `shared/prompt-editor/` is the toolbar+textarea `ControlValueAccessor` that writes that syntax, and
+  `shared/markdown/markdown.pipe.ts` renders it back everywhere it's displayed (candidate test page,
+  recruiter review). Nothing here ever does `[innerHTML]` on raw untrusted text.
 
 ## Environment gotchas hit while building this (useful if picking this up on the same machine)
 
@@ -94,20 +157,34 @@ against a production build — see the "Environment gotchas" and design-decision
 real bugs that surfaced this way (Monaco CSS, LazyInitializationException, hung SMTP requests).
 
 Feature set as of the latest commit: auth/JWT with approval + admin-invite flows, a test bank recruiters
-can create *and edit* (any recruiter/admin can edit any test), assignment scheduling with unique candidate
-links, the Monaco-based candidate test page with proctoring-event logging (tab switches/window blur/paste
-attempts), a recruiter review page with a saved review comment + a "Reviewed" badge on the dashboard so
-submissions aren't re-reviewed, and admins seeing all assignments across every recruiter (not just their
-own). Backend/frontend test suites both passing.
+can create *and edit* (any recruiter/admin can edit any test) as a **multi-page, multi-question** test --
+each page has its own timer and holds one or more questions of type CODE (Monaco, with per-question font
+size/color), TEXT (free-text/theoretical), or MULTIPLE_CHOICE, with plain-text/markdown-lite instructions
+per question -- assignment scheduling with unique candidate links, the candidate test page walking through
+pages one at a time (no going back once advanced) with proctoring-event logging (tab switches/window
+blur/paste attempts) and a single final submit of all answers, a recruiter review page showing every
+page/question/answer (including MCQ correctness) with a saved review comment + a "Reviewed" badge on the
+dashboard so submissions aren't re-reviewed, and admins seeing all assignments across every recruiter (not
+just their own). 6 sample Java tests are seeded: the original 3 (Order Total/Customer Transactions/
+Completed Orders, migrated into the new page/question shape) plus 3 new ones built in the new shape
+(Junior/Mid/Senior Java Developer, each 3 pages -- MCQs, then a theory question, then a code question,
+5 questions total). Backend/frontend test suites both passing.
 
 **Explicitly out of scope (by request, not oversight):**
 - Candidate self-signup/accounts.
-- Automated code execution/auto-grading — recruiters review manually.
+- Automated code execution/auto-grading — recruiters review manually. MULTIPLE_CHOICE questions have a
+  marked correct option for the recruiter's own reference during review, but nothing auto-scores a
+  submission.
 - Automated AI-cheating detection of any kind — built, then fully retired (see design decisions above);
-  currently nothing flags a submission automatically.
+  currently nothing flags a submission automatically. A recruiter can still hand-craft a manual
+  white-on-white trap line via the per-question editor font color (see design decisions above).
 - Copy/screenshot prevention on the candidate's question panel — no web technology can stop an actual
-  screenshot anyway, and it isn't needed now that there's no AI-trap mechanism for it to conflict with.
-- Test edit history/versioning — edits apply live, no snapshot of what a candidate was actually shown.
+  screenshot anyway, and it isn't needed now that there's no automated AI-trap mechanism for it to
+  conflict with.
+- Test edit history/versioning — edits apply live to future/in-progress assignments; already-submitted
+  answers are protected via the snapshot columns described above, but there's still no way to see what a
+  test's other pages/questions looked like before an edit.
+- Going back to a previous page once a candidate has advanced past it (per-page timers are one-way).
 
 ## Render deploy gotcha: rapid-fire pushes can deploy out of order
 

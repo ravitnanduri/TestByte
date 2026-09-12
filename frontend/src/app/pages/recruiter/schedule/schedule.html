@@ -35,7 +35,11 @@
           <select id="test" formControlName="testId">
             <option [ngValue]="null" disabled>Select a test</option>
             @for (t of tests(); track t.id) {
-              <option [ngValue]="t.id">{{ t.title }} ({{ t.language }}, {{ t.durationMinutes }} min)</option>
+              <option [ngValue]="t.id">
+                {{ t.title }} ({{ t.questionCount }} question{{ t.questionCount === 1 ? '' : 's' }}, {{
+                  t.totalDurationMinutes
+                }} min)
+              </option>
             }
           </select>
         </div>

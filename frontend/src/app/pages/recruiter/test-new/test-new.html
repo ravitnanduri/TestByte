@@ -1,50 +1,5 @@
 <div class="page">
   <p><a routerLink="/recruiter/dashboard">&larr; Back to dashboard</a></p>
   <h2>New test</h2>
-
-  <div class="card">
-    @if (error()) {
-      <div class="alert alert-error">{{ error() }}</div>
-    }
-
-    <form [formGroup]="form" (ngSubmit)="submit()">
-      <div class="form-field">
-        <label for="title">Title</label>
-        <input id="title" type="text" formControlName="title" />
-      </div>
-
-      <div class="form-field">
-        <label for="language">Language</label>
-        <select id="language" formControlName="language">
-          @for (lang of languages; track lang) {
-            <option [value]="lang">{{ lang }}</option>
-          }
-        </select>
-      </div>
-
-      <div class="form-field">
-        <label for="instructions">Instructions (HTML)</label>
-        <textarea id="instructions" formControlName="instructionsHtml" rows="8"></textarea>
-      </div>
-
-      <div class="form-field">
-        <label>Starter code</label>
-        <app-monaco-editor
-          [value]="form.controls.starterCode.value"
-          [language]="monacoLanguage()"
-          (valueChange)="onStarterCodeChange($event)"
-          style="display: block; height: 320px;"
-        />
-      </div>
-
-      <div class="form-field" style="max-width: 200px;">
-        <label for="duration">Duration (minutes)</label>
-        <input id="duration" type="number" formControlName="durationMinutes" min="1" />
-      </div>
-
-      <button class="btn btn-primary" type="submit" [disabled]="form.invalid || saving()">
-        {{ saving() ? 'Saving...' : 'Create test' }}
-      </button>
-    </form>
-  </div>
+  <app-test-form [saving]="saving()" [error]="error()" submitLabel="Create test" (save)="onSave($event)" />
 </div>

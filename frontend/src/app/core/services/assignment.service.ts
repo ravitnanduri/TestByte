@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
+  AnswerRequest,
   AssignmentReview,
   AssignmentSummary,
   CreateAssignmentRequest,
@@ -40,7 +41,7 @@ export class AssignmentService {
     return this.http.post<PublicAssignment>(`${this.publicBaseUrl}/${token}/start`, {});
   }
 
-  submit(token: string, code: string, proctoringEvents: string): Observable<void> {
-    return this.http.post<void>(`${this.publicBaseUrl}/${token}/submit`, { code, proctoringEvents });
+  submit(token: string, answers: AnswerRequest[], proctoringEvents: string): Observable<void> {
+    return this.http.post<void>(`${this.publicBaseUrl}/${token}/submit`, { answers, proctoringEvents });
   }
 }

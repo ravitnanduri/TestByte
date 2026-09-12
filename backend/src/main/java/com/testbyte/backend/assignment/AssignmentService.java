@@ -1,21 +1,31 @@
 package com.testbyte.backend.assignment;
 
 import com.testbyte.backend.assessment.AssessmentService;
+import com.testbyte.backend.assignment.dto.AnswerRequest;
 import com.testbyte.backend.assignment.dto.AssignmentReviewResponse;
 import com.testbyte.backend.assignment.dto.AssignmentSummaryResponse;
 import com.testbyte.backend.assignment.dto.CreateAssignmentRequest;
 import com.testbyte.backend.assignment.dto.PublicAssignmentResponse;
+import com.testbyte.backend.assignment.dto.ReviewPage;
+import com.testbyte.backend.assignment.dto.ReviewQuestionAnswer;
+import com.testbyte.backend.assignment.dto.ReviewQuestionOption;
 import com.testbyte.backend.domain.Assessment;
 import com.testbyte.backend.domain.AssessmentAssignment;
+import com.testbyte.backend.domain.AssignmentAnswer;
 import com.testbyte.backend.domain.AssignmentStatus;
 import com.testbyte.backend.domain.Role;
+import com.testbyte.backend.domain.TestQuestion;
+import com.testbyte.backend.domain.TestQuestionOption;
 import com.testbyte.backend.domain.User;
 import com.testbyte.backend.email.EmailService;
+import com.testbyte.backend.exception.BadRequestException;
 import com.testbyte.backend.exception.ConflictException;
 import com.testbyte.backend.exception.ForbiddenException;
 import com.testbyte.backend.exception.GoneException;
 import com.testbyte.backend.exception.NotFoundException;
 import com.testbyte.backend.repository.AssessmentAssignmentRepository;
+import com.testbyte.backend.repository.TestQuestionOptionRepository;
+import com.testbyte.backend.repository.TestQuestionRepository;
 import com.testbyte.backend.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -24,7 +34,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 public class AssignmentService {
@@ -32,6 +44,8 @@ public class AssignmentService {
     private final AssessmentAssignmentRepository assignmentRepository;
     private final AssessmentService assessmentService;
     private final UserRepository userRepository;
+    private final TestQuestionRepository testQuestionRepository;
+    private final TestQuestionOptionRepository testQuestionOptionRepository;
     private final EmailService emailService;
     private final String frontendBaseUrl;
     private final long assignmentLinkExpiryDays;
@@ -39,12 +53,16 @@ public class AssignmentService {
     public AssignmentService(AssessmentAssignmentRepository assignmentRepository,
                               AssessmentService assessmentService,
                               UserRepository userRepository,
+                              TestQuestionRepository testQuestionRepository,
+                              TestQuestionOptionRepository testQuestionOptionRepository,
                               EmailService emailService,
                               @Value("${app.frontend-base-url}") String frontendBaseUrl,
                               @Value("${app.assignment-link-expiry-days}") long assignmentLinkExpiryDays) {
         this.assignmentRepository = assignmentRepository;
         this.assessmentService = assessmentService;
         this.userRepository = userRepository;
+        this.testQuestionRepository = testQuestionRepository;
+        this.testQuestionOptionRepository = testQuestionOptionRepository;
         this.emailService = emailService;
         this.frontendBaseUrl = frontendBaseUrl;
         this.assignmentLinkExpiryDays = assignmentLinkExpiryDays;
@@ -98,7 +116,7 @@ public class AssignmentService {
         }
 
         markExpiredIfNeeded(assignment);
-        return AssignmentReviewResponse.from(assignment);
+        return buildReviewResponse(assignment);
     }
 
     @Transactional
@@ -129,7 +147,7 @@ public class AssignmentService {
     }
 
     @Transactional
-    public void submit(UUID token, String code, String proctoringEvents) {
+    public void submit(UUID token, List<AnswerRequest> answerRequests, String proctoringEvents) {
         AssessmentAssignment assignment = findByToken(token);
         markExpiredIfNeeded(assignment);
 
@@ -140,7 +158,36 @@ public class AssignmentService {
             throw new ConflictException("This test has already been submitted");
         }
 
-        assignment.setSubmittedCode(code);
+        Long testId = assignment.getAssessment().getId();
+        for (AnswerRequest answerRequest : answerRequests) {
+            TestQuestion question = testQuestionRepository.findById(answerRequest.questionId())
+                    .orElseThrow(() -> new BadRequestException("Unknown question in submission"));
+            if (!question.getPage().getTest().getId().equals(testId)) {
+                throw new BadRequestException("Question does not belong to this test");
+            }
+
+            TestQuestionOption selectedOption = null;
+            if (answerRequest.selectedOptionId() != null) {
+                selectedOption = testQuestionOptionRepository.findById(answerRequest.selectedOptionId())
+                        .orElseThrow(() -> new BadRequestException("Unknown option in submission"));
+                if (!selectedOption.getQuestion().getId().equals(question.getId())) {
+                    throw new BadRequestException("Selected option does not belong to the given question");
+                }
+            }
+
+            assignment.getAnswers().add(AssignmentAnswer.builder()
+                    .assignment(assignment)
+                    .question(question)
+                    .answerText(answerRequest.answerText())
+                    .selectedOption(selectedOption)
+                    .promptSnapshot(question.getPrompt())
+                    .questionTypeSnapshot(question.getQuestionType())
+                    .languageSnapshot(question.getLanguage())
+                    .selectedOptionTextSnapshot(selectedOption != null ? selectedOption.getOptionText() : null)
+                    .selectedOptionWasCorrectSnapshot(selectedOption != null ? selectedOption.isCorrect() : null)
+                    .build());
+        }
+
         assignment.setStatus(AssignmentStatus.SUBMITTED);
         assignment.setSubmittedAt(Instant.now());
         assignment.setProctoringEventsJson(proctoringEvents);
@@ -170,7 +217,7 @@ public class AssignmentService {
         assignment.setReviewedBy(reviewer);
         assignmentRepository.save(assignment);
 
-        return AssignmentReviewResponse.from(assignment);
+        return buildReviewResponse(assignment);
     }
 
     private AssessmentAssignment findByToken(UUID token) {
@@ -188,5 +235,83 @@ public class AssignmentService {
             assignment.setStatus(AssignmentStatus.EXPIRED);
             assignmentRepository.save(assignment);
         }
+    }
+
+    /**
+     * Merges the test's live page/question structure with the assignment's answers. A question the
+     * recruiter has since deleted has no live TestQuestion any more (its answer's question FK went null
+     * on delete) -- that answer is reported separately via orphanedAnswers, built entirely from the
+     * snapshot columns captured at submit time, rather than dropped or nested under a page that no
+     * longer exists.
+     */
+    private AssignmentReviewResponse buildReviewResponse(AssessmentAssignment assignment) {
+        Map<Long, AssignmentAnswer> answersByQuestionId = assignment.getAnswers().stream()
+                .filter(a -> a.getQuestion() != null)
+                .collect(Collectors.toMap(a -> a.getQuestion().getId(), a -> a, (a, b) -> a));
+
+        List<ReviewPage> pages = assignment.getAssessment().getPages().stream()
+                .map(page -> new ReviewPage(
+                        page.getDurationMinutes(),
+                        page.getQuestions().stream()
+                                .map(q -> toReviewAnswer(q, answersByQuestionId.get(q.getId())))
+                                .toList()))
+                .toList();
+
+        List<ReviewQuestionAnswer> orphanedAnswers = assignment.getAnswers().stream()
+                .filter(a -> a.getQuestion() == null)
+                .map(this::toOrphanedReviewAnswer)
+                .toList();
+
+        return new AssignmentReviewResponse(
+                assignment.getId(),
+                assignment.getCandidateName(),
+                assignment.getRoleAppliedFor(),
+                assignment.getAssessment().getTitle(),
+                pages,
+                orphanedAnswers,
+                assignment.getStatus(),
+                assignment.getCreatedAt(),
+                assignment.getStartedAt(),
+                assignment.getSubmittedAt(),
+                assignment.getProctoringEventsJson(),
+                assignment.getReviewComment(),
+                assignment.getReviewedAt(),
+                assignment.getReviewedBy() != null ? assignment.getReviewedBy().getName() : null
+        );
+    }
+
+    private ReviewQuestionAnswer toReviewAnswer(TestQuestion question, AssignmentAnswer answer) {
+        List<ReviewQuestionOption> options = question.getOptions().stream().map(ReviewQuestionOption::from).toList();
+        return new ReviewQuestionAnswer(
+                question.getId(),
+                question.getQuestionType(),
+                question.getPrompt(),
+                question.getLanguage(),
+                question.getStarterCode(),
+                question.getEditorFontSize(),
+                question.getEditorFontColor(),
+                options,
+                answer != null ? answer.getAnswerText() : null,
+                answer != null && answer.getSelectedOption() != null ? answer.getSelectedOption().getId() : null,
+                answer != null ? answer.getSelectedOptionTextSnapshot() : null,
+                answer != null ? answer.getSelectedOptionWasCorrectSnapshot() : null
+        );
+    }
+
+    private ReviewQuestionAnswer toOrphanedReviewAnswer(AssignmentAnswer answer) {
+        return new ReviewQuestionAnswer(
+                null,
+                answer.getQuestionTypeSnapshot(),
+                answer.getPromptSnapshot(),
+                answer.getLanguageSnapshot(),
+                null,
+                null,
+                null,
+                List.of(),
+                answer.getAnswerText(),
+                null,
+                answer.getSelectedOptionTextSnapshot(),
+                answer.getSelectedOptionWasCorrectSnapshot()
+        );
     }
 }

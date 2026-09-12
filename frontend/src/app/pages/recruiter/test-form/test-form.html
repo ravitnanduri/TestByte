@@ -1,0 +1,134 @@
+<form [formGroup]="form" (ngSubmit)="submit()">
+  @if (error) {
+    <div class="alert alert-error">{{ error }}</div>
+  }
+  @if (validationError()) {
+    <div class="alert alert-error">{{ validationError() }}</div>
+  }
+
+  <div class="form-field">
+    <label for="title">Title</label>
+    <input id="title" type="text" formControlName="title" />
+  </div>
+
+  @for (page of pages.controls; track $index; let pageIndex = $index) {
+    <div [formGroup]="page" class="card" style="margin-bottom: 20px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+        <h3 style="margin: 0;">Page {{ pageIndex + 1 }}</h3>
+        <button
+          type="button"
+          class="btn btn-secondary"
+          [disabled]="pages.length === 1"
+          (click)="removePage(pageIndex)"
+        >
+          Remove page
+        </button>
+      </div>
+
+      <div class="form-field" style="max-width: 200px;">
+        <label>Timer for this page (minutes)</label>
+        <input type="number" formControlName="durationMinutes" min="1" />
+      </div>
+
+      @for (question of questionsOf(page).controls; track $index; let questionIndex = $index) {
+        <div [formGroup]="question" style="border: 1px solid var(--color-border); border-radius: 8px; padding: 16px; margin-bottom: 12px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <strong>Question {{ questionIndex + 1 }}</strong>
+            <button
+              type="button"
+              class="btn btn-secondary"
+              [disabled]="questionsOf(page).length === 1"
+              (click)="removeQuestion(page, questionIndex)"
+            >
+              Remove question
+            </button>
+          </div>
+
+          <div class="form-field">
+            <label>Question type</label>
+            <select formControlName="type" (change)="onQuestionTypeChange(question)">
+              @for (t of questionTypes; track t) {
+                <option [value]="t">{{ t }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="form-field">
+            <label>Question text / instructions</label>
+            <app-prompt-editor formControlName="prompt" />
+          </div>
+
+          @if (question.controls.type.value === 'CODE') {
+            <div class="form-field">
+              <label>Language</label>
+              <select formControlName="language">
+                @for (lang of languages; track lang) {
+                  <option [value]="lang">{{ lang }}</option>
+                }
+              </select>
+            </div>
+
+            <div style="display: flex; gap: 16px; margin-bottom: 16px;">
+              <div class="form-field" style="max-width: 140px; margin-bottom: 0;">
+                <label>Editor font size</label>
+                <input type="number" formControlName="editorFontSize" min="8" max="32" />
+              </div>
+              <div class="form-field" style="max-width: 140px; margin-bottom: 0;">
+                <label>Editor font color</label>
+                <input type="color" formControlName="editorFontColor" />
+              </div>
+            </div>
+
+            <div class="form-field">
+              <label>Starter code</label>
+              <app-monaco-editor
+                [value]="question.controls.starterCode.value"
+                [language]="monacoLanguage(question)"
+                [fontSize]="question.controls.editorFontSize.value"
+                [fontColor]="question.controls.editorFontColor.value"
+                (valueChange)="onStarterCodeChange(question, $event)"
+                style="display: block; height: 260px;"
+              />
+            </div>
+          }
+
+          @if (question.controls.type.value === 'MULTIPLE_CHOICE') {
+            <div class="form-field">
+              <label>Options (select the correct one)</label>
+              @for (option of optionsOf(question).controls; track $index; let optionIndex = $index) {
+                <div [formGroup]="option" style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                  <input
+                    type="radio"
+                    [name]="'correct-' + pageIndex + '-' + questionIndex"
+                    [checked]="option.controls.correct.value"
+                    (change)="selectCorrectOption(question, optionIndex)"
+                  />
+                  <input type="text" formControlName="text" placeholder="Option text" style="flex: 1;" />
+                  <button
+                    type="button"
+                    class="btn btn-secondary"
+                    [disabled]="optionsOf(question).length <= 2"
+                    (click)="removeOption(question, optionIndex)"
+                  >
+                    Remove
+                  </button>
+                </div>
+              }
+              <button type="button" class="btn btn-secondary" (click)="addOption(question)">Add option</button>
+            </div>
+          }
+        </div>
+      }
+
+      <button type="button" class="btn btn-secondary" (click)="addQuestion(page)">Add question to this page</button>
+    </div>
+  }
+
+  <div style="margin-bottom: 20px;">
+    <button type="button" class="btn btn-secondary" (click)="addPage()">Add another page</button>
+  </div>
+
+  <button class="btn btn-primary" type="submit" [disabled]="saving">
+    {{ saving ? 'Saving...' : submitLabel }}
+  </button>
+</form>

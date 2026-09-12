@@ -1,15 +1,13 @@
 package com.testbyte.backend.assessment.dto;
 
-import com.testbyte.backend.domain.AssessmentLanguage;
-import jakarta.validation.constraints.Min;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.NotEmpty;
+
+import java.util.List;
 
 public record CreateAssessmentRequest(
         @NotBlank String title,
-        @NotNull AssessmentLanguage language,
-        @NotBlank String instructionsHtml,
-        @NotBlank String starterCode,
-        @NotNull @Min(1) Integer durationMinutes
+        @NotEmpty @Valid List<TestPageRequest> pages
 ) {
 }

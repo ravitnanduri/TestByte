@@ -1,20 +1,21 @@
 package com.testbyte.backend.assignment.dto;
 
-import com.testbyte.backend.domain.AssessmentAssignment;
-import com.testbyte.backend.domain.AssessmentLanguage;
 import com.testbyte.backend.domain.AssignmentStatus;
 
 import java.time.Instant;
+import java.util.List;
 
+/**
+ * Built by AssignmentService.getForReview (not a plain static "from", since it merges the live test
+ * structure with the assignment's answers) rather than here.
+ */
 public record AssignmentReviewResponse(
         Long id,
         String candidateName,
         String roleAppliedFor,
         String testTitle,
-        AssessmentLanguage language,
-        String instructionsHtml,
-        String starterCode,
-        String submittedCode,
+        List<ReviewPage> pages,
+        List<ReviewQuestionAnswer> orphanedAnswers,
         AssignmentStatus status,
         Instant createdAt,
         Instant startedAt,
@@ -24,24 +25,4 @@ public record AssignmentReviewResponse(
         Instant reviewedAt,
         String reviewedByName
 ) {
-    public static AssignmentReviewResponse from(AssessmentAssignment assignment) {
-        return new AssignmentReviewResponse(
-                assignment.getId(),
-                assignment.getCandidateName(),
-                assignment.getRoleAppliedFor(),
-                assignment.getAssessment().getTitle(),
-                assignment.getAssessment().getLanguage(),
-                assignment.getAssessment().getInstructionsHtml(),
-                assignment.getAssessment().getStarterCode(),
-                assignment.getSubmittedCode(),
-                assignment.getStatus(),
-                assignment.getCreatedAt(),
-                assignment.getStartedAt(),
-                assignment.getSubmittedAt(),
-                assignment.getProctoringEventsJson(),
-                assignment.getReviewComment(),
-                assignment.getReviewedAt(),
-                assignment.getReviewedBy() != null ? assignment.getReviewedBy().getName() : null
-        );
-    }
 }

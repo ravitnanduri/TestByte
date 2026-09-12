@@ -6,7 +6,7 @@
   } @else if (submitted()) {
     <div class="card">
       <h2>Thanks, {{ assignment()?.candidateName }}!</h2>
-      <p>Your answer has been submitted. You may close this page.</p>
+      <p>Your answers have been submitted. You may close this page.</p>
     </div>
   } @else if (assignment(); as a) {
     @if (a.status === 'SUBMITTED') {
@@ -23,33 +23,67 @@
       <div class="card">
         <h2>{{ a.testTitle }}</h2>
         <p style="color: var(--color-text-muted);">
-          Hi {{ a.candidateName }}, this exercise takes about {{ a.durationMinutes }} minutes.
-          The timer starts as soon as you click Start.
+          Hi {{ a.candidateName }}, this test has {{ a.pages.length }} page{{ a.pages.length === 1 ? '' : 's' }}.
+          Each page has its own timer that starts as soon as you reach it, and once you move on you can't go back.
         </p>
-        <div [innerHTML]="a.instructionsHtml"></div>
         <button class="btn btn-primary" (click)="begin()">Start test</button>
       </div>
-    } @else {
+    } @else if (currentPage(); as page) {
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
         <h2 style="margin: 0;">{{ a.testTitle }}</h2>
-        <div class="badge badge-in-progress" style="font-size: 16px; padding: 6px 14px;">
-          {{ remainingLabel() }}
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <span style="color: var(--color-text-muted); font-size: 14px;">
+            Page {{ currentPageIndex() + 1 }} of {{ a.pages.length }}
+          </span>
+          <div class="badge badge-in-progress" style="font-size: 16px; padding: 6px 14px;">
+            {{ remainingLabel() }}
+          </div>
         </div>
       </div>
 
-      <div class="card" style="margin-bottom: 20px;">
-        <div [innerHTML]="a.instructionsHtml"></div>
-      </div>
+      @for (q of page.questions; track q.id) {
+        <div class="card" style="margin-bottom: 20px;">
+          <div [innerHTML]="q.prompt | markdown" style="margin-bottom: 16px;"></div>
 
-      <app-monaco-editor
-        [value]="code()"
-        [language]="monacoLanguage()"
-        (valueChange)="code.set($event)"
-        style="display: block; height: 420px; margin-bottom: 16px;"
-      />
+          @if (q.type === 'CODE') {
+            <app-monaco-editor
+              [value]="answerText(q.id)"
+              [language]="monacoLanguage(q.language)"
+              [fontSize]="q.editorFontSize"
+              [fontColor]="q.editorFontColor"
+              (valueChange)="setAnswerText(q.id, $event)"
+              (pasteDetected)="onEditorPaste($event)"
+              (copyDetected)="onEditorCopy($event)"
+              (cutDetected)="onEditorCut($event)"
+              style="display: block; height: 360px;"
+            />
+          } @else if (q.type === 'TEXT') {
+            <textarea
+              rows="6"
+              [value]="answerText(q.id)"
+              (input)="setAnswerText(q.id, $any($event.target).value)"
+              placeholder="Type your answer..."
+            ></textarea>
+          } @else if (q.type === 'MULTIPLE_CHOICE') {
+            <div>
+              @for (option of q.options; track option.id) {
+                <label style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px; cursor: pointer;">
+                  <input
+                    type="radio"
+                    [name]="'question-' + q.id"
+                    [checked]="selectedOptionId(q.id) === option.id"
+                    (change)="setSelectedOption(q.id, option.id)"
+                  />
+                  {{ option.text }}
+                </label>
+              }
+            </div>
+          }
+        </div>
+      }
 
-      <button class="btn btn-primary" [disabled]="submitting()" (click)="submit()">
-        {{ submitting() ? 'Submitting...' : 'Submit answer' }}
+      <button class="btn btn-primary" [disabled]="submitting()" (click)="goToNextPageOrSubmit()">
+        {{ submitting() ? 'Submitting...' : isLastPage() ? 'Submit answers' : 'Next page' }}
       </button>
     }
   }
