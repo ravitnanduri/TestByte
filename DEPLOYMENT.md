@@ -75,19 +75,104 @@ to be a hard gate, add a branch protection rule on `main` requiring both workflo
 
 ---
 
-## Moving to Azure later
+## Moving to Azure
 
-Nothing here is Render/Vercel/Neon-specific at the application level, so the move is a redeploy, not a
-rewrite:
+Nothing here is Render/Vercel/Neon-specific at the application level, so this is a redeploy, not a
+rewrite: same Spring Boot jar, same Angular build output, same env vars. This section is the concrete plan
+for moving onto the org's Microsoft/Azure account.
 
-- **Backend**: the same `backend/Dockerfile` image redeploys as-is to Azure App Service (Web App for
-  Containers) or Azure Container Apps — just point it at a new registry/build pipeline and carry over the
-  same env vars.
-- **Database**: the backend only uses standard JDBC + Flyway against Postgres, no Neon-specific features.
-  Migrating to Azure Database for PostgreSQL is a `pg_dump` from Neon, `pg_restore` into Azure, and a
-  `DB_URL` change.
-- **Frontend**: swap Vercel for Azure Static Web Apps — same Angular build output
-  (`dist/frontend/browser`), just a different host serving it.
-- **CI/CD**: GitHub Actions stays as-is. If the repo moves to a different GitHub org/business account,
-  re-point any deploy-target secrets under that org's repo settings — the workflow YAML itself doesn't
-  hardcode an org/account.
+**If you don't have Azure portal access yourself** (e.g. IT/leadership wants to run the account and not
+hand out access), send them [AZURE_SETUP_FOR_IT.md](AZURE_SETUP_FOR_IT.md) — it's a self-contained,
+non-developer-facing walkthrough that creates every resource below and ends with a short list of values to
+send back to you. Once you have those values, come back here for the GitHub Actions wiring.
+
+### Recommended architecture
+
+| Piece | Azure service | Tier | Why |
+|---|---|---|---|
+| Backend | App Service (Linux, **Java SE** runtime — not a container) | **Basic B1** | Only Basic+ supports "Always On" — this is what actually kills the free-tier cold-start lag you have today on Render. Java SE deploys the built jar directly, no container registry to stand up. Way more headroom than 15 recruiters/200 candidates a month need. |
+| Database | Azure Database for PostgreSQL — Flexible Server | **Burstable B1ms**, 32 GB storage | Cheapest managed Postgres tier that doesn't auto-suspend (Neon's free tier does auto-suspend, which is a second, separate source of the "lag" you're trying to get rid of). |
+| Frontend | Azure Static Web Apps | **Free** | Free tier already includes custom domains, free SSL, and a global CDN — plenty for a small Angular SPA at this traffic. |
+
+Put all three in the **same Azure region**, closest to your office/candidates (e.g. East US, Central US —
+ask your admin which region the org's other Azure/M365 resources already live in, and match it).
+
+### Estimated cost
+
+Roughly **$28–35/month total**, all-in, no cold starts:
+- App Service Basic B1: ~$13/mo
+- PostgreSQL Flexible Server Burstable B1ms + 32 GB storage: ~$15–18/mo
+- Static Web Apps Free tier: $0
+- Custom domain SSL on both: free (Azure-managed certificates)
+
+This is a genuine "no lag" fix, not a bigger free tier — Basic B1 + a non-suspending DB means the app is
+always warm. (A cheaper hybrid — keep the current free Neon database and only move the backend/frontend to
+Azure — saves the ~$15–18/mo DB cost, but Neon's free tier still auto-suspends on its own schedule, so it
+only partly solves the lag. Worth knowing as a fallback if budget is tighter than expected, but not the
+recommended path given "no lag" is the explicit goal.)
+
+### What you need from your Microsoft/Azure admin
+
+1. **An Azure subscription under the org's Microsoft Entra ID tenant** (the same tenant your Microsoft 365
+   business account lives in). Many small-office M365 plans don't have an Azure subscription attached yet
+   — someone with Global Admin on the tenant needs to add one (Pay-As-You-Go; no separate contract needed,
+   it bills through the same Microsoft account). If one already exists, you just need a resource group in
+   it.
+2. **DNS access for yourdomain.com** — just enough to add 3–4 CNAME/TXT records (not full domain transfer).
+   Whoever manages that domain's DNS (could be the registrar directly, or Microsoft 365 admin center if
+   the domain was added there for email) needs to add the records — see below.
+3. A decision on **who actually clicks the buttons**: either (a) you get "Contributor" access scoped to
+   just the one resource group (least-privilege, doesn't touch anything else in the tenant), or (b) IT
+   creates everything themselves following AZURE_SETUP_FOR_IT.md and hands you back the values listed at
+   the end of that file. Both land in the same place.
+4. Confirmation on **email**: no action needed up front. The Zoho SMTP timeouts you saw on Render are very
+   likely a Render-specific outbound-port restriction, not a Zoho problem — this will probably just start
+   working once the backend is off Render. If it doesn't, the fallback is routing mail through Microsoft
+   365's own SMTP instead (the org already pays for it) — that needs IT to enable SMTP AUTH on a sending
+   mailbox, which is a 2-minute Exchange admin center change if it comes to that. Not worth doing
+   preemptively.
+
+### Using yourdomain.com
+
+Two subdomains, both pointing at Azure resources via DNS — no need to touch the bare `yourdomain.com` record
+(leave that alone if it's already used for email/website):
+
+- `app.yourdomain.com` → the frontend (Static Web App). One CNAME record.
+- `api.yourdomain.com` → the backend (App Service). One CNAME record + one TXT record (Azure's domain
+  ownership verification) while it's being set up; the TXT record can be removed once verified.
+
+Both get free, auto-renewing SSL certificates from Azure once the CNAME is verified — nothing to buy or
+renew manually.
+
+### GitHub Actions wiring (once you have values back from IT)
+
+Azure App Service and Static Web Apps each hand you a single opaque deployment credential rather than
+needing a full service-principal setup — this is exactly what AZURE_SETUP_FOR_IT.md generates for you:
+
+- `AZURE_WEBAPP_PUBLISH_PROFILE` — from the App Service's Deployment Center. Add as a GitHub Actions
+  repository secret.
+- `AZURE_STATIC_WEB_APPS_API_TOKEN` — from the Static Web App's "Manage deployment token". Add as a GitHub
+  Actions repository secret.
+
+With those two secrets in place, add two new workflow files (`.github/workflows/backend-deploy-azure.yml`,
+`.github/workflows/frontend-deploy-azure.yml`) that build the same way `backend-ci.yml`/`frontend-ci.yml`
+already do:
+
+- Backend: `./mvnw -B -DskipTests package` (same as the Dockerfile's build step, just without the Docker
+  layer), then `azure/webapps-deploy@v3` with `package: backend/target/*.jar` — no container registry
+  needed since Java SE deploys the jar directly.
+- Frontend: `npm ci && npm run build`, then `Azure/static-web-apps-deploy@v1` pointed at
+  `frontend/dist/frontend/browser`.
+
+Both triggered on push to `main`. (Ask in a future session to have these generated once the secrets exist
+— holding off on committing them until then avoids a workflow that just fails on every push in the
+meantime.) Before the frontend build step, also update
+[frontend/src/environments/environment.ts](frontend/src/environments/environment.ts)'s `apiBaseUrl` to
+`https://api.yourdomain.com/api` (or whatever backend URL IT gives you).
+
+### Database migration
+
+Once the new Postgres Flexible Server exists (from IT, or yourself if you have access): `pg_dump` from the
+current Neon database, `pg_restore` into the new one, then point the App Service's `DB_URL` application
+setting at it. Flyway won't re-run migrations that already have a matching entry in its history table, so
+this is a data copy, not a schema rebuild.
