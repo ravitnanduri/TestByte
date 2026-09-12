@@ -27,7 +27,7 @@
           </thead>
           <tbody>
             @for (e of proctoringEvents(); track $index) {
-              <tr>
+              <tr [style.color]="e.type === 'paste_internal' ? 'var(--color-text-muted)' : null">
                 <td>{{ eventLabel(e.type) }}</td>
                 <td>{{ e.timestamp | date: 'medium' }}</td>
               </tr>

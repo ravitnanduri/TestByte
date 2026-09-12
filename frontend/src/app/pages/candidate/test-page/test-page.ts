@@ -211,8 +211,11 @@ export class TestPage implements OnInit, OnDestroy {
 
   /**
    * Text copied or cut from anywhere on this page during the test, so a later paste of exactly that text
-   * can be recognized as "pasted their own copy" rather than flagged as pasted-in-from-outside. Compared
-   * with normalized whitespace/line-endings since a round trip through the OS clipboard can alter those.
+   * can be recorded as "pasted their own copy" (type `paste_internal`) instead of a real external paste
+   * (`paste_attempt`) -- both show up in the activity log, just labeled differently, so nothing is hidden
+   * from the recruiter but an internal round-trip doesn't read as suspicious the way an external one does.
+   * Compared with normalized whitespace/line-endings since a round trip through the OS clipboard can alter
+   * those.
    */
   private copiedSnippets = new Set<string>();
 
@@ -250,8 +253,7 @@ export class TestPage implements OnInit, OnDestroy {
     const target = event.target as HTMLElement | null;
     if (target?.closest('.monaco-host')) return;
     const pasted = event.clipboardData?.getData('text/plain') ?? '';
-    if (this.isInternalPaste(pasted)) return;
-    this.recordEvent('paste_attempt');
+    this.recordEvent(this.isInternalPaste(pasted) ? 'paste_internal' : 'paste_attempt');
   };
 
   private onCopy = (event: Event) => {
@@ -277,8 +279,7 @@ export class TestPage implements OnInit, OnDestroy {
   }
 
   onEditorPaste(pastedText: string): void {
-    if (this.isInternalPaste(pastedText)) return;
-    this.recordEvent('paste_attempt');
+    this.recordEvent(this.isInternalPaste(pastedText) ? 'paste_internal' : 'paste_attempt');
   }
 
   onEditorCopy(copiedText: string): void {

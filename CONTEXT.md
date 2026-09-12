@@ -73,19 +73,21 @@ hosting setup.
   physical paste doesn't get logged twice. Copy/cut (`copy_attempt`/`cut_attempt`) don't have this problem
   -- they're pure clipboard/selection actions independent of Monaco's text-input mechanism, so the
   page-level `document`-capture listeners catch them reliably everywhere, Monaco included.
-- **A paste is only flagged if it didn't come from this page.** `TestPage` (`pages/candidate/test-page/
-  test-page.ts`) keeps a `copiedSnippets` set of everything the candidate has copied/cut *on this page*
-  during the test (from the instructions panel, a TEXT answer, or a CODE editor -- `MonacoEditor.
-  copyDetected`/`cutDetected` read the actual selected text straight off the model via `editor.
-  getSelection()`, since Monaco has no public `onDidCopy`/`onDidCut` to hook the way `onDidPaste` is
-  hooked). On paste, the pasted text (from `ClipboardEvent.clipboardData` for the document-level path, or
-  from `editor.getModel().getValueInRange(e.range)` for Monaco's `onDidPaste` -- not its `clipboardEvent`
+- **A paste that round-trips content copied from the page itself is logged separately from a real
+  external paste**, not hidden. `TestPage` (`pages/candidate/test-page/test-page.ts`) keeps a
+  `copiedSnippets` set of everything the candidate has copied/cut *on this page* during the test (from
+  the instructions panel, a TEXT answer, or a CODE editor -- `MonacoEditor.copyDetected`/`cutDetected`
+  read the actual selected text straight off the model via `editor.getSelection()`, since Monaco has no
+  public `onDidCopy`/`onDidCut` to hook the way `onDidPaste` is hooked). On paste, the pasted text (from
+  `ClipboardEvent.clipboardData` for the document-level path, or from
+  `editor.getModel().getValueInRange(e.range)` for Monaco's `onDidPaste` -- not its `clipboardEvent`
   field, which isn't reliably populated either) is compared against that set (normalized: `\r\n`→`\n`,
-  trimmed) and simply not recorded as a `paste_attempt` if it matches -- e.g. copying a snippet from the
-  instructions and pasting it into the code editor, or re-pasting something already typed, doesn't get
-  flagged. Only content that didn't originate from a copy/cut on this page counts as a real paste-in.
-  This is intentionally an exact-string match, not fuzzy -- a large pasted block won't accidentally match
-  a short previously-copied snippet unless it equals it exactly.
+  trimmed): a match records `paste_internal` (e.g. copying a snippet from the instructions into the code
+  editor, or re-pasting something already typed), anything else records the usual `paste_attempt`. Both
+  appear in the recruiter's activity log -- nothing is hidden -- but `paste_internal` renders muted and
+  under a different label (`assignment-review.html`/`.ts`) so it doesn't read as suspicious the way a real
+  external paste does. This is intentionally an exact-string match, not fuzzy -- a large pasted block
+  won't accidentally match a short previously-copied snippet unless it equals it exactly.
 - **Review comments are single/overwritable**, not a thread — `review_comment` + `reviewed_at` +
   `reviewed_by` columns get replaced wholesale on each save. The dashboard's "Reviewed" badge is just
   `reviewedAt != null` on `AssignmentSummaryResponse`.

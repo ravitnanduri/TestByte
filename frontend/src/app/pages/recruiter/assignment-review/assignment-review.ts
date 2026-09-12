@@ -73,7 +73,9 @@ export class AssignmentReview implements OnInit {
       case 'window_focus':
         return 'Window regained focus';
       case 'paste_attempt':
-        return 'Pasted into the editor';
+        return 'Pasted content from outside the page';
+      case 'paste_internal':
+        return 'Pasted text they copied from the page';
       case 'copy_attempt':
         return 'Copied text on the page';
       case 'cut_attempt':
